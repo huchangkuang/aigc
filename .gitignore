@@ -1,0 +1,54 @@
+# dependencies
+node_modules
+.pnpm-store
+
+# build
+dist
+.next
+out
+build
+*.tsbuildinfo
+
+# env
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# IDE & local AI tooling
+.idea
+.vscode/*
+!.vscode/extensions.json
+.claude/
+.cursor/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# testing
+coverage
+
+# prisma
+apps/api/prisma/*.db
+apps/api/prisma/*.db-journal
+
+# turbo
+.turbo
+
+# docker
+docker/mysql/data
+
+# vercel
+.vercel
+
+# scaffold docs (use root README instead)
+apps/api/README.md
+apps/web/README.md
+apps/web/AGENTS.md
+apps/web/CLAUDE.md

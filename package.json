@@ -1,0 +1,21 @@
+{
+  "name": "aigc",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "dev:web": "pnpm --filter @aigc/web dev",
+    "dev:api": "pnpm --filter @aigc/api dev",
+    "build": "pnpm -r build",
+    "build:web": "pnpm --filter @aigc/web build",
+    "build:api": "pnpm --filter @aigc/api build",
+    "lint": "pnpm -r lint",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:build": "docker compose build",
+    "docker:dev": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

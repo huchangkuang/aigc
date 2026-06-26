@@ -1,0 +1,30 @@
+services:
+  mysql:
+    ports:
+      - '${MYSQL_PORT:-3307}:3306'
+
+  api:
+    build:
+      target: base
+    command: sh -c "pnpm install && pnpm --filter @aigc/api prisma:generate && pnpm --filter @aigc/api dev"
+    volumes:
+      - .:/app
+      - api_node_modules:/app/node_modules
+      - api_app_node_modules:/app/apps/api/node_modules
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:-aigc}:${MYSQL_PASSWORD:-aigc_password}@mysql:3306/${MYSQL_DATABASE:-aigc}
+
+  web:
+    build:
+      target: base
+    command: sh -c "pnpm install && pnpm --filter @aigc/web dev"
+    volumes:
+      - .:/app
+      - web_node_modules:/app/node_modules
+      - web_app_node_modules:/app/apps/web/node_modules
+
+volumes:
+  api_node_modules:
+  api_app_node_modules:
+  web_node_modules:
+  web_app_node_modules:
