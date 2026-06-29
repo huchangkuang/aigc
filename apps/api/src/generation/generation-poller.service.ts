@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Interval } from '@nestjs/schedule';
-import { AssetType } from '@prisma/client';
+import { AssetType, GenerationTask, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { AssetService } from '../asset/asset.service';
 import { JimengService } from '../jimeng/jimeng.service';
@@ -38,7 +38,7 @@ export class GenerationPollerService {
     try {
       const active = await this.tasks.listActive();
       for (const task of active) {
-        await this.pollOne(task.id, task.reqKey, task.jimengTaskId!, task.userId, task.type);
+        await this.pollOne(task);
       }
     } finally {
       this.polling = false;
@@ -46,12 +46,16 @@ export class GenerationPollerService {
   }
 
   private async pollOne(
-    taskId: string,
-    reqKey: string,
-    jimengTaskId: string,
-    userId: string,
-    type: string,
+    task: Pick<
+      GenerationTask,
+      'id' | 'reqKey' | 'jimengTaskId' | 'userId' | 'type' | 'inputParams'
+    >,
   ) {
+    const { id: taskId, reqKey, jimengTaskId, userId, type, inputParams } = task;
+    if (!jimengTaskId) return;
+
+    const assetMetadata = this.buildAssetMetadata(inputParams);
+
     try {
       const isVideo = type.startsWith('video_');
       const result = await this.jimeng.getResult(reqKey, jimengTaskId, {
@@ -93,7 +97,7 @@ export class GenerationPollerService {
           type: AssetType.video,
           ossKey: persisted.ossKey,
           mimeType: persisted.mimeType,
-          metadata: { sourceUrl: videoUrl },
+          metadata: { ...assetMetadata, sourceUrl: videoUrl },
         });
       } else {
         const urls = result.data?.image_urls ?? [];
@@ -115,7 +119,7 @@ export class GenerationPollerService {
               type: AssetType.image,
               ossKey: persisted.ossKey,
               mimeType: persisted.mimeType,
-              metadata: { sourceUrl: url },
+              metadata: { ...assetMetadata, sourceUrl: url },
             });
           }
         } else if (base64List.length) {
@@ -134,7 +138,7 @@ export class GenerationPollerService {
               type: AssetType.image,
               ossKey: persisted.ossKey,
               mimeType: persisted.mimeType,
-              metadata: { source: 'binary_data_base64' },
+              metadata: { ...assetMetadata, source: 'binary_data_base64' },
             });
           }
         } else {
@@ -149,5 +153,16 @@ export class GenerationPollerService {
       this.logger.error(`Poll failed for ${taskId}: ${message}`);
       await this.tasks.markFailed(taskId, message);
     }
+  }
+
+  private buildAssetMetadata(inputParams: Prisma.JsonValue): Prisma.JsonObject {
+    if (!inputParams || typeof inputParams !== 'object' || Array.isArray(inputParams)) {
+      return {};
+    }
+    const prompt = (inputParams as { prompt?: unknown }).prompt;
+    if (typeof prompt !== 'string' || !prompt.trim()) {
+      return {};
+    }
+    return { prompt: prompt.trim() };
   }
 }

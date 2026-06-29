@@ -1,6 +1,7 @@
 'use client';
 
 import { Icon } from '@/components/icon';
+import { MediaPreview } from '@/components/media-preview';
 import type { Asset } from '@/lib/api-client';
 
 function formatDate(value: string) {
@@ -19,28 +20,37 @@ function assetTags(asset: Asset): string[] {
 }
 
 export function AssetCard({ asset }: { asset: Asset }) {
-  const title = String(asset.metadata.prompt ?? asset.id).slice(0, 40);
+  const title =
+    typeof asset.metadata.prompt === 'string' && asset.metadata.prompt.trim()
+      ? asset.metadata.prompt.trim().slice(0, 40)
+      : asset.type === 'video'
+        ? '未命名视频'
+        : '未命名图片';
 
   return (
     <article className="asset-card glass-panel group flex flex-col overflow-hidden rounded-xl transition-all duration-300">
       <div className="relative aspect-square overflow-hidden bg-surface-container-low">
-        {asset.type === 'image' && asset.previewUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+        {asset.previewUrl ? (
+          <MediaPreview
             src={asset.previewUrl}
-            alt=""
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-          />
-        ) : asset.type === 'video' && asset.previewUrl ? (
-          <>
-            <video src={asset.previewUrl} className="h-full w-full object-cover" muted />
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/0">
-              <Icon
-                name="play_circle"
-                className="text-display-lg text-primary/60 transition-colors group-hover:text-primary"
-              />
-            </div>
-          </>
+            type={asset.type}
+            title={title}
+            className="block h-full w-full"
+            mediaClassName="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+          >
+            {asset.type === 'video' ? (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20 transition-colors group-hover:bg-black/0">
+                <Icon
+                  name="play_circle"
+                  className="text-display-lg text-primary/60 transition-colors group-hover:text-primary"
+                />
+              </div>
+            ) : (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-opacity group-hover:bg-black/20 group-hover:opacity-100">
+                <Icon name="zoom_in" className="text-3xl text-white/90" />
+              </div>
+            )}
+          </MediaPreview>
         ) : (
           <div className="flex h-full items-center justify-center">
             <Icon name="broken_image" className="text-4xl text-on-surface-variant" />

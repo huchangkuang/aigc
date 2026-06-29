@@ -1,6 +1,7 @@
 'use client';
 
 import { Icon } from '@/components/icon';
+import { MediaPreview } from '@/components/media-preview';
 import type { Asset, GenerationTask } from '@/lib/api-client';
 
 type GenerationPreviewPanelProps = {
@@ -19,6 +20,10 @@ export function GenerationPreviewPanel({
   );
   const latestAsset = assets[0];
   const showProcessing = loading || Boolean(activeTask);
+  const prompt =
+    typeof latestAsset?.metadata.prompt === 'string'
+      ? latestAsset.metadata.prompt
+      : undefined;
 
   return (
     <div className="glass-panel flex h-[500px] flex-col overflow-hidden rounded-xl">
@@ -70,29 +75,21 @@ export function GenerationPreviewPanel({
 
         {!showProcessing && latestAsset?.previewUrl ? (
           <div className="scan-effect absolute inset-0">
-            {latestAsset.type === 'video' ? (
-              <video
-                src={latestAsset.previewUrl}
-                className="h-full w-full object-cover"
-                controls
-                muted
-              />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={latestAsset.previewUrl}
-                alt=""
-                className="h-full w-full object-cover"
-              />
-            )}
-            <div className="absolute bottom-md left-md right-md flex gap-md">
-              <div className="glass-panel flex-1 rounded-lg border border-white/10 bg-surface/40 p-sm backdrop-blur-md">
-                <p className="text-label-sm font-bold text-on-surface">元数据</p>
-                <p className="text-xs text-on-surface-variant">
-                  {String(latestAsset.metadata.prompt ?? latestAsset.id).slice(0, 60)}
-                </p>
+            <MediaPreview
+              src={latestAsset.previewUrl}
+              type={latestAsset.type}
+              title={prompt}
+              className="absolute inset-0 h-full w-full"
+              mediaClassName="h-full w-full object-cover"
+            />
+            {prompt ? (
+              <div className="pointer-events-none absolute bottom-md left-md right-md flex gap-md">
+                <div className="glass-panel flex-1 rounded-lg border border-white/10 bg-surface/40 p-sm backdrop-blur-md">
+                  <p className="text-label-sm font-bold text-on-surface">提示词</p>
+                  <p className="text-xs text-on-surface-variant">{prompt.slice(0, 120)}</p>
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
         ) : null}
 

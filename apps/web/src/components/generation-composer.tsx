@@ -2,6 +2,7 @@
 
 import { FormEvent, useRef, type ReactNode } from 'react';
 import { Icon } from '@/components/icon';
+import { MediaPreview } from '@/components/media-preview';
 
 const GENERATION_TYPES = [
   { value: 'image', label: '文生图', icon: 'image' },
@@ -142,8 +143,17 @@ export function GenerationComposer({
                 key={item.id}
                 className="group relative h-20 w-20 overflow-hidden rounded-lg border border-outline-variant/40 bg-surface-container-low"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={item.src} alt="" className="h-full w-full object-cover" />
+                {!item.uploading ? (
+                  <MediaPreview
+                    src={item.src}
+                    type="image"
+                    className="h-full w-full"
+                    mediaClassName="h-full w-full object-cover"
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.src} alt="" className="h-full w-full object-cover" />
+                )}
                 {item.uploading ? (
                   <div className="absolute inset-0 flex items-center justify-center bg-surface/70">
                     <Icon name="progress_activity" className="animate-spin text-primary" />
@@ -153,7 +163,7 @@ export function GenerationComposer({
                   <button
                     type="button"
                     onClick={() => onRemoveReference(item.id)}
-                    className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-surface/90 text-on-surface opacity-0 transition-opacity group-hover:opacity-100"
+                    className="absolute right-0.5 top-0.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-surface/90 text-on-surface opacity-0 transition-opacity group-hover:opacity-100"
                   >
                     <Icon name="close" className="text-xs" />
                   </button>

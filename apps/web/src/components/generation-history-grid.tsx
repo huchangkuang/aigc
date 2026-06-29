@@ -1,6 +1,7 @@
 'use client';
 
 import { Icon } from '@/components/icon';
+import { MediaPreview } from '@/components/media-preview';
 import type { Asset } from '@/lib/api-client';
 
 type GenerationHistoryGridProps = {
@@ -12,36 +13,28 @@ export function GenerationHistoryGrid({ assets }: GenerationHistoryGridProps) {
 
   return (
     <div className="grid grid-cols-4 gap-sm">
-      {recent.map((asset) => (
-        <a
-          key={asset.id}
-          href={asset.previewUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="glass-panel aspect-square overflow-hidden rounded-lg border border-outline-variant/30 transition-all hover:border-primary/40"
-        >
-          {asset.previewUrl ? (
-            asset.type === 'video' ? (
-              <video
-                src={asset.previewUrl}
-                className="h-full w-full object-cover opacity-60 transition-opacity hover:opacity-100"
-                muted
-              />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={asset.previewUrl}
-                alt=""
-                className="h-full w-full object-cover opacity-60 transition-opacity hover:opacity-100"
-              />
-            )
-          ) : (
-            <div className="flex h-full items-center justify-center">
-              <Icon name="broken_image" className="text-on-surface-variant" />
-            </div>
-          )}
-        </a>
-      ))}
+      {recent.map((asset) => {
+        const title =
+          typeof asset.metadata.prompt === 'string' ? asset.metadata.prompt : undefined;
+
+        return asset.previewUrl ? (
+          <MediaPreview
+            key={asset.id}
+            src={asset.previewUrl}
+            type={asset.type}
+            title={title}
+            className="glass-panel aspect-square overflow-hidden rounded-lg border border-outline-variant/30 transition-all hover:border-primary/40"
+            mediaClassName="h-full w-full object-cover opacity-60 transition-opacity hover:opacity-100"
+          />
+        ) : (
+          <div
+            key={asset.id}
+            className="glass-panel flex aspect-square items-center justify-center rounded-lg border border-outline-variant/30"
+          >
+            <Icon name="broken_image" className="text-on-surface-variant" />
+          </div>
+        );
+      })}
       {Array.from({ length: Math.max(0, 3 - recent.length) }).map((_, index) => (
         <div
           key={`empty-${index}`}
