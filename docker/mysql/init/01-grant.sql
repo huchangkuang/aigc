@@ -1,4 +1,4 @@
--- Prisma migrate dev 需要创建 shadow database
+-- Prisma migrate dev 需要 shadow database 及外键 REFERENCES 权限
 GRANT ALL PRIVILEGES ON `aigc`.* TO 'aigc'@'%';
-GRANT CREATE, DROP, ALTER, INDEX ON *.* TO 'aigc'@'%';
+GRANT CREATE, DROP, ALTER, INDEX, REFERENCES, SELECT, INSERT, UPDATE, DELETE, CREATE TEMPORARY TABLES, LOCK TABLES ON *.* TO 'aigc'@'%';
 FLUSH PRIVILEGES;

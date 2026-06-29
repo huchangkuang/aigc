@@ -7,12 +7,75 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum GenerationType {
+  image
+  video_t2v
+  video_i2v_first
+  video_i2v_first_tail
+  video_i2v_recamera
+}
+
+enum GenerationStatus {
+  pending
+  processing
+  done
+  failed
+}
+
+enum AssetType {
+  image
+  video
+}
+
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  generationTasks GenerationTask[]
+  assets          Asset[]
 
   @@map("users")
+}
+
+model GenerationTask {
+  id           String           @id @default(cuid())
+  userId       String
+  type         GenerationType
+  status       GenerationStatus @default(pending)
+  jimengTaskId String?
+  reqKey       String
+  inputParams  Json
+  errorMessage String?          @db.Text
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  completedAt  DateTime?
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assets Asset[]
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("generation_tasks")
+}
+
+model Asset {
+  id        String    @id @default(cuid())
+  userId    String
+  taskId    String?
+  type      AssetType
+  ossKey    String
+  mimeType  String
+  metadata  Json
+  createdAt DateTime  @default(now())
+
+  user User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task GenerationTask? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([taskId])
+  @@map("assets")
 }

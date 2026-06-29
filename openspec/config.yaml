@@ -1,20 +1,25 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  AIGC Platform monorepo（pnpm workspace）。
+  前端 apps/web：Next.js (App Router) + TypeScript + Tailwind CSS + Zustand。
+  后端 apps/api：NestJS + Prisma + MySQL + TypeScript。
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  测试策略（Superpowers TDD 必须遵循）：
+  - 前端：Vitest + React Testing Library，命令 `pnpm --filter @aigc/web test`
+  - 后端：Jest（NestJS 内置），命令 `pnpm --filter @aigc/api test`
+  - 全量：`pnpm test`（根目录）
+  - 实现阶段 RED-GREEN-REFACTOR：先写失败测试 → 确认失败 → 最少实现 → 确认通过
+
+  React 编码规范：
+  1. 除非页面出现性能问题，否则尽量不使用 useMemo 或 useCallback
+  2. useEffect 尽量减少依赖，最优为单个依赖
+  3. 单个组件不超过 400 行；超出时拆独立子组件（各自管理内部状态），禁止假优化（仅抽 hook 留 UI 壳）
+
+  工作流：OpenSpec（propose → apply → archive）+ Superpowers（TDD、code review、verification）。
+
+rules:
+  tasks:
+    - 每个 task 必须包含对应的测试文件路径与验证命令
+    - 后端 task 使用 `*.spec.ts`（Jest）；前端 task 使用 `*.test.ts(x)`（Vitest）
+    - apply 阶段遵循 Superpowers test-driven-development：先测后码

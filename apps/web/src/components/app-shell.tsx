@@ -1,0 +1,102 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { Icon } from '@/components/icon';
+import { useAuthStore } from '@/stores/auth-store';
+
+const SIDEBAR_WIDTH = 'w-56';
+
+const navLinks = [
+  { href: '/generate', label: '素材生成', icon: 'auto_awesome' },
+  { href: '/assets', label: '资产库', icon: 'collections' },
+] as const;
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <aside
+        className={`fixed left-0 top-0 z-50 flex h-screen ${SIDEBAR_WIDTH} flex-col border-r border-primary/20 bg-surface/70 px-2 py-4 shadow-[0_0_20px_rgba(0,219,233,0.1)] backdrop-blur-xl`}
+      >
+        <div className="mb-6 px-2">
+          <h1 className="text-base font-bold tracking-tight text-primary">AIGC 工作台</h1>
+          <p className="text-label-sm mt-0.5 text-on-surface-variant">专业创作</p>
+        </div>
+
+        <nav className="flex-1 space-y-0.5 px-1">
+          {navLinks.map((link) => {
+            const active = pathname.startsWith(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition-all duration-300 active:scale-95 ${
+                  active
+                    ? 'border-r-2 border-primary bg-primary/10 font-bold text-primary'
+                    : 'font-medium text-on-surface-variant hover:bg-primary/10 hover:text-primary'
+                }`}
+              >
+                <Icon name={link.icon} filled={active} className="text-xl" />
+                {link.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="mt-auto space-y-0.5 border-t border-primary/10 px-1 pt-3">
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-on-surface-variant transition-all hover:bg-primary/10 hover:text-primary"
+            onClick={() => {
+              logout();
+              router.push('/login');
+            }}
+          >
+            <Icon name="logout" className="text-xl" />
+            登出
+          </button>
+
+          {user ? (
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-primary/10 bg-surface-container-low p-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20">
+                <Icon name="account_circle" className="text-primary" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-bold text-on-surface">{user.email}</p>
+                <p className="truncate text-[10px] text-on-surface-variant">预设账号</p>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </aside>
+
+      <header className="fixed left-56 right-0 top-0 z-40 flex h-14 items-center justify-end border-b border-primary/10 bg-surface/70 px-gutter backdrop-blur-xl">
+        <div className="flex items-center gap-md">
+          <div className="group relative hidden w-56 sm:block">
+            <Icon
+              name="search"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant transition-colors group-focus-within:text-primary"
+            />
+            <input
+              type="search"
+              placeholder="搜索资产…"
+              className="w-full rounded-full border border-outline-variant bg-surface-container-low py-1.5 pl-10 pr-4 text-sm text-on-surface outline-none transition-all placeholder:text-outline-variant focus:border-primary focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <button type="button" className="p-2 text-on-surface-variant transition-colors hover:text-primary">
+            <Icon name="notifications" />
+          </button>
+        </div>
+      </header>
+
+      <main className="ml-56 min-h-screen overflow-y-auto pt-14">
+        <div className="mx-auto max-w-[1400px] p-gutter">{children}</div>
+      </main>
+    </div>
+  );
+}
