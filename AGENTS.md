@@ -17,6 +17,8 @@
 | 后端 | Jest | `pnpm --filter @aigc/api test` |
 | 全量 | — | `pnpm test` |
 
+测试文件统一放在源码同级的 `__test__/` 目录（前端 `*.test.ts(x)`，后端 `*.spec.ts`）。
+
 ## 前端编码规范
 
 见 `apps/web/CLAUDE.md`（Claude Code）或 `.cursor/rules/react-component-conventions.mdc`（Cursor）。

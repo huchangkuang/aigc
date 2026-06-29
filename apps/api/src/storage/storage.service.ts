@@ -82,6 +82,18 @@ export class StorageService {
     return this.uploadBuffer(key, buffer, mimeType);
   }
 
+  async persistFromBase64(
+    userId: string,
+    assetId: string,
+    base64: string,
+    mimeType: string,
+  ): Promise<PersistedObject> {
+    const buffer = Buffer.from(base64, 'base64');
+    const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg';
+    const key = `assets/${userId}/${assetId}.${ext}`;
+    return this.uploadBuffer(key, buffer, mimeType);
+  }
+
   async persistFromUrl(
     userId: string,
     assetId: string,

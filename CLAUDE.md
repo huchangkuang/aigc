@@ -24,4 +24,4 @@
 - 技术栈：Next.js (App Router) + TypeScript + Tailwind CSS + Zustand
 - 项目已初始化 **OpenSpec**（`openspec/`），变更需遵循 spec-driven 流程
 - 实现阶段遵循 **Superpowers TDD**：先写失败测试（`pnpm test` 确认 RED）→ 最少实现 → 确认 GREEN
-- 前端测试：`*.test.ts(x)`（Vitest）；后端测试：`*.spec.ts`（Jest）
+- 前端测试：`__test__/*.test.ts(x)`（Vitest）；后端测试：`__test__/*.spec.ts`（Jest）

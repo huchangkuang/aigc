@@ -20,6 +20,7 @@ export class JimengService {
         accessKeyId,
         secretKey,
       });
+      this.logger.log('即梦 API 已启用');
     } else {
       this.service = null;
       this.logger.warn('Volcengine credentials missing; Jimeng API disabled');
@@ -34,10 +35,14 @@ export class JimengService {
     return this.call<JimengSubmitResponse>('CVSync2AsyncSubmitTask', reqKey, body);
   }
 
-  async getResult(reqKey: string, taskId: string, reqJson?: string) {
+  async getResult(
+    reqKey: string,
+    taskId: string,
+    options?: { returnUrl?: boolean },
+  ) {
     const body: Record<string, unknown> = { req_key: reqKey, task_id: taskId };
-    if (reqJson) {
-      body.req_json = reqJson;
+    if (options?.returnUrl) {
+      body.req_json = JSON.stringify({ return_url: true });
     }
     return this.call<JimengResultResponse>('CVSync2AsyncGetResult', reqKey, body, false);
   }
@@ -54,13 +59,13 @@ export class JimengService {
 
     const payload = includeReqKey ? { req_key: reqKey, ...body } : body;
 
-    const response = await this.service.fetchOpenAPI(
-      {
-        Action: action,
-        Version: '2022-08-31',
-      },
-      payload,
-    );
+    const response = await this.service.fetchOpenAPI({
+      Action: action,
+      Version: '2022-08-31',
+      method: 'POST',
+      data: payload,
+      headers: { 'content-type': 'application/json; charset=utf-8' },
+    });
 
     return response as T;
   }

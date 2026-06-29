@@ -53,7 +53,10 @@ export class GenerationPollerService {
     type: string,
   ) {
     try {
-      const result = await this.jimeng.getResult(reqKey, jimengTaskId);
+      const isVideo = type.startsWith('video_');
+      const result = await this.jimeng.getResult(reqKey, jimengTaskId, {
+        returnUrl: !isVideo,
+      });
       if (result.code !== 10000) {
         await this.tasks.markFailed(taskId, result.message ?? 'Jimeng error');
         return;
@@ -70,7 +73,6 @@ export class GenerationPollerService {
         return;
       }
 
-      const isVideo = type.startsWith('video_');
       if (isVideo) {
         const videoUrl = result.data?.video_url;
         if (!videoUrl) {
@@ -95,27 +97,49 @@ export class GenerationPollerService {
         });
       } else {
         const urls = result.data?.image_urls ?? [];
-        if (!urls.length) {
-          await this.tasks.markFailed(taskId, 'Missing image_urls');
+        const base64List = result.data?.binary_data_base64 ?? [];
+
+        if (urls.length) {
+          for (const url of urls) {
+            const assetId = randomUUID();
+            const persisted = await this.storage.persistFromUrl(
+              userId,
+              assetId,
+              url,
+              'image/png',
+            );
+            await this.assets.createFromPersisted({
+              id: assetId,
+              userId,
+              taskId,
+              type: AssetType.image,
+              ossKey: persisted.ossKey,
+              mimeType: persisted.mimeType,
+              metadata: { sourceUrl: url },
+            });
+          }
+        } else if (base64List.length) {
+          for (const encoded of base64List) {
+            const assetId = randomUUID();
+            const persisted = await this.storage.persistFromBase64(
+              userId,
+              assetId,
+              encoded,
+              'image/png',
+            );
+            await this.assets.createFromPersisted({
+              id: assetId,
+              userId,
+              taskId,
+              type: AssetType.image,
+              ossKey: persisted.ossKey,
+              mimeType: persisted.mimeType,
+              metadata: { source: 'binary_data_base64' },
+            });
+          }
+        } else {
+          await this.tasks.markFailed(taskId, '生成结果中未包含图片');
           return;
-        }
-        for (const url of urls) {
-          const assetId = randomUUID();
-          const persisted = await this.storage.persistFromUrl(
-            userId,
-            assetId,
-            url,
-            'image/png',
-          );
-          await this.assets.createFromPersisted({
-            id: assetId,
-            userId,
-            taskId,
-            type: AssetType.image,
-            ossKey: persisted.ossKey,
-            mimeType: persisted.mimeType,
-            metadata: { sourceUrl: url },
-          });
         }
       }
 

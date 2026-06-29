@@ -20,6 +20,7 @@ export type JimengResultResponse = {
   data?: {
     status?: string;
     image_urls?: string[];
+    binary_data_base64?: string[];
     video_url?: string;
   };
   message?: string;

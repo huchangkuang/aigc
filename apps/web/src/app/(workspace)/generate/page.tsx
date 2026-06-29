@@ -125,17 +125,15 @@ export default function GeneratePage() {
     setLoading(true);
     setMessage('');
     try {
-      const body: Record<string, unknown> = { type, prompt, frames };
+      const body: Record<string, unknown> = { type, prompt };
+
+      if (type !== 'image') {
+        body.frames = frames;
+      }
 
       if (type === 'video_t2v') body.aspect_ratio = aspectRatio;
 
-      const needsImages =
-        type === 'video_i2v_first' ||
-        type === 'video_i2v_first_tail' ||
-        type === 'video_i2v_recamera' ||
-        type === 'image';
-
-      if (needsImages && imageUrls.trim()) {
+      if (imageUrls.trim()) {
         body.image_urls = parseImageUrls(imageUrls);
       }
 
