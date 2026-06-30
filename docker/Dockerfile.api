@@ -5,7 +5,7 @@ WORKDIR /app
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY apps/api/package.json ./apps/api/
-RUN pnpm install --frozen-lockfile --filter @aigc/api...
+RUN pnpm install --frozen-lockfile --filter @aigc/api... --ignore-scripts
 
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
