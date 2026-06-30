@@ -10,11 +10,7 @@
     "build:api": "pnpm --filter @aigc/api build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
-    "test:watch": "pnpm -r test:watch",
-    "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down",
-    "docker:build": "docker compose build",
-    "docker:dev": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up"
+    "test:watch": "pnpm -r test:watch"
   },
   "engines": {
     "node": ">=20"

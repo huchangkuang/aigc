@@ -9,7 +9,7 @@
 | 包管理 | pnpm workspace |
 | 前端 | Next.js、Tailwind CSS、Zustand、TypeScript |
 | 后端 | NestJS、Prisma、MySQL、TypeScript |
-| 部署 | Docker Compose |
+| 部署 | git pull + 构建 + pm2（或同类进程管理） |
 
 ## 项目结构
 
@@ -18,9 +18,7 @@ aigc/
 ├── apps/
 │   ├── web/          # Next.js 前端
 │   └── api/          # NestJS 后端
-├── docker/           # Docker 构建文件
-├── docker-compose.yml
-└── docker-compose.dev.yml
+└── openspec/         # OpenSpec 变更管理
 ```
 
 ## 快速开始
@@ -39,19 +37,15 @@ cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
 ```
 
-### 3. 启动 MySQL（Docker）
+在 `apps/api/.env` 中配置 `DATABASE_URL`（个人练手可用本机 MySQL `root` 用户）。
 
-```bash
-docker compose up mysql -d
-```
-
-### 4. 数据库迁移
+### 3. 数据库迁移
 
 ```bash
 pnpm --filter @aigc/api prisma:migrate
 ```
 
-### 5. 本地开发
+### 4. 本地开发
 
 ```bash
 # 同时启动前后端
@@ -98,20 +92,6 @@ pnpm dev:api   # http://localhost:3001
 | GET | `/assets` | 资产列表 |
 | POST | `/storage/upload` | 上传参考图 |
 
-## Docker 部署
-
-### 生产构建
-
-```bash
-docker compose up -d --build
-```
-
-### 开发模式（热更新）
-
-```bash
-pnpm docker:dev
-```
-
 ## 常用命令
 
 | 命令 | 说明 |
@@ -122,8 +102,7 @@ pnpm docker:dev
 | `pnpm test:watch` | 监听模式运行单测 |
 | `pnpm lint` | 运行 ESLint |
 | `pnpm --filter @aigc/api prisma:studio` | 打开 Prisma Studio |
-| `pnpm docker:up` | Docker 启动全部服务 |
-| `pnpm docker:down` | 停止 Docker 服务 |
+| `pnpm --filter @aigc/api prisma:migrate:deploy` | 生产环境应用迁移 |
 
 ## OpenSpec + Superpowers 工作流
 
@@ -140,4 +119,4 @@ pnpm docker:dev
 |------|----------|
 | Web | 3000 |
 | API | 3001 |
-| MySQL | 3307（宿主机映射，容器内仍为 3306） |
+| MySQL | 3306（本机 MySQL，见 `DATABASE_URL`） |

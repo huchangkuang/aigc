@@ -41,9 +41,6 @@ apps/api/prisma/*.db-journal
 # turbo
 .turbo
 
-# docker
-docker/mysql/data
-
 # vercel
 .vercel
 
