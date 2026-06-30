@@ -11,13 +11,22 @@ export type LoginResponse = {
   user: { id: string; email: string };
 };
 
+export type TaskAsset = {
+  id: string;
+  type: 'image' | 'video';
+  previewUrl?: string;
+  mimeType: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
+
 export type GenerationTask = {
   id: string;
   type: string;
   status: string;
   errorMessage?: string | null;
   inputParams: Record<string, unknown>;
-  assets?: Array<{ id: string; type: string }>;
+  assets?: TaskAsset[];
   createdAt: string;
 };
 
@@ -28,6 +37,18 @@ export type Asset = {
   mimeType: string;
   metadata: Record<string, unknown>;
   createdAt: string;
+};
+
+export type ComposeContext = {
+  assetId: string;
+  assetType: 'image' | 'video';
+  prompt?: string;
+  imageUrls: string[];
+  generationType?: string;
+  frames?: number;
+  aspectRatio?: string;
+  templateId?: string;
+  cameraStrength?: string;
 };
 
 function getToken() {
@@ -92,6 +113,20 @@ export const api = {
   listAssets(type?: string) {
     const query = type ? `?type=${type}` : '';
     return apiFetch<Asset[]>(`/assets${query}`);
+  },
+  renameAsset(id: string, title: string) {
+    return apiFetch<Asset>(`/assets/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title }),
+    });
+  },
+  deleteAsset(id: string) {
+    return apiFetch<{ id: string }>(`/assets/${id}`, {
+      method: 'DELETE',
+    });
+  },
+  getComposeContext(id: string) {
+    return apiFetch<ComposeContext>(`/assets/${id}/compose-context`);
   },
   uploadReference(file: File) {
     const form = new FormData();

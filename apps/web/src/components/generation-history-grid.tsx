@@ -2,14 +2,15 @@
 
 import { Icon } from '@/components/icon';
 import { MediaPreview } from '@/components/media-preview';
-import type { Asset } from '@/lib/api-client';
+import { collectOutputAssets } from '@/lib/generation-output';
+import type { GenerationTask } from '@/lib/api-client';
 
 type GenerationHistoryGridProps = {
-  assets: Asset[];
+  tasks: GenerationTask[];
 };
 
-export function GenerationHistoryGrid({ assets }: GenerationHistoryGridProps) {
-  const recent = assets.slice(0, 3);
+export function GenerationHistoryGrid({ tasks }: GenerationHistoryGridProps) {
+  const recent = collectOutputAssets(tasks).slice(0, 3);
 
   return (
     <div className="grid grid-cols-4 gap-sm">

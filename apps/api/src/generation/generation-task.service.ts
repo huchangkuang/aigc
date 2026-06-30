@@ -63,7 +63,16 @@ export class GenerationTaskService {
       where: { userId },
       orderBy: { createdAt: 'desc' },
       include: {
-        assets: { select: { id: true, type: true } },
+        assets: {
+          select: {
+            id: true,
+            type: true,
+            ossKey: true,
+            mimeType: true,
+            metadata: true,
+            createdAt: true,
+          },
+        },
       },
     });
   }

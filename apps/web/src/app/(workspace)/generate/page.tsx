@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   GenerationComposer,
   type GenerationType,
@@ -9,10 +9,13 @@ import {
 import { GenerationHistoryGrid } from '@/components/generation-history-grid';
 import { GenerationPreviewPanel } from '@/components/generation-preview-panel';
 import { TaskQueueDock } from '@/components/task-queue-dock';
-import { api, type Asset, type GenerationTask } from '@/lib/api-client';
+import { api, type GenerationTask } from '@/lib/api-client';
+import { hasActiveTasks } from '@/lib/generation-output';
+import { consumeComposerDraft } from '@/stores/composer-draft-store';
 import { toast } from '@/stores/toast-store';
 
 const MAX_REFERENCE_IMAGES = 14;
+const TASK_POLL_INTERVAL_MS = 5000;
 
 type PendingReference = {
   id: string;
@@ -36,9 +39,16 @@ export default function GeneratePage() {
   const [templateId, setTemplateId] = useState('hitchcock_dolly_in');
   const [cameraStrength, setCameraStrength] = useState('medium');
   const [tasks, setTasks] = useState<GenerationTask[]>([]);
-  const [assets, setAssets] = useState<Asset[]>([]);
+  const [pollingTasks, setPollingTasks] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const refreshTasks = useCallback(async () => {
+    const data = await api.listTasks();
+    setTasks(data);
+    setPollingTasks(hasActiveTasks(data));
+    return data;
+  }, []);
 
   const references = useMemo<ReferencePreview[]>(() => {
     const confirmed = parseImageUrls(imageUrls).map((url, index) => ({
@@ -53,25 +63,44 @@ export default function GeneratePage() {
     return [...confirmed, ...pending];
   }, [imageUrls, pendingRefs]);
 
-  async function refreshTasks() {
-    const data = await api.listTasks();
-    setTasks(data);
-  }
-
-  async function refreshAssets() {
-    const data = await api.listAssets();
-    setAssets(data);
-  }
-
   useEffect(() => {
     refreshTasks().catch(() => undefined);
-    refreshAssets().catch(() => undefined);
+  }, [refreshTasks]);
+
+  useEffect(() => {
+    const draft = consumeComposerDraft();
+    if (!draft) return;
+
+    if (draft.mode === 'similar' || draft.mode === 'promptOnly') {
+      if (draft.prompt !== undefined) setPrompt(draft.prompt);
+    }
+
+    if (draft.mode === 'similar' || draft.mode === 'imageOnly') {
+      setImageUrls(draft.imageUrls?.length ? draft.imageUrls.join('\n') : '');
+    }
+
+    if (draft.mode === 'promptOnly') {
+      setImageUrls('');
+    }
+
+    if (draft.mode === 'similar') {
+      if (draft.type) setType(draft.type);
+      if (draft.frames !== undefined) setFrames(draft.frames);
+      if (draft.aspectRatio) setAspectRatio(draft.aspectRatio);
+      if (draft.templateId) setTemplateId(draft.templateId);
+      if (draft.cameraStrength) setCameraStrength(draft.cameraStrength);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!pollingTasks) return;
+
     const timer = setInterval(() => {
       refreshTasks().catch(() => undefined);
-      refreshAssets().catch(() => undefined);
-    }, 5000);
+    }, TASK_POLL_INTERVAL_MS);
+
     return () => clearInterval(timer);
-  }, []);
+  }, [pollingTasks, refreshTasks]);
 
   function removeReference(id: string) {
     if (id.startsWith('confirmed-')) {
@@ -198,8 +227,8 @@ export default function GeneratePage() {
         </div>
 
         <div className="col-span-12 space-y-gutter lg:col-span-5">
-          <GenerationPreviewPanel tasks={tasks} assets={assets} loading={loading} />
-          <GenerationHistoryGrid assets={assets} />
+          <GenerationPreviewPanel tasks={tasks} loading={loading} />
+          <GenerationHistoryGrid tasks={tasks} />
         </div>
       </div>
 

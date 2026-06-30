@@ -19,11 +19,15 @@ export default function AssetsPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  function loadAssets() {
     api
       .listAssets(type === 'all' ? undefined : type)
       .then(setAssets)
       .catch((err) => setError(err instanceof Error ? err.message : '加载失败'));
+  }
+
+  useEffect(() => {
+    loadAssets();
   }, [type]);
 
   return (
@@ -82,7 +86,7 @@ export default function AssetsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-md pb-xl sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {assets.map((asset) => (
-            <AssetCard key={asset.id} asset={asset} />
+            <AssetCard key={asset.id} asset={asset} onChanged={loadAssets} />
           ))}
         </div>
       )}

@@ -2,23 +2,22 @@
 
 import { Icon } from '@/components/icon';
 import { MediaPreview } from '@/components/media-preview';
-import type { Asset, GenerationTask } from '@/lib/api-client';
+import { getLatestOutputAsset } from '@/lib/generation-output';
+import type { GenerationTask } from '@/lib/api-client';
 
 type GenerationPreviewPanelProps = {
   tasks: GenerationTask[];
-  assets: Asset[];
   loading: boolean;
 };
 
 export function GenerationPreviewPanel({
   tasks,
-  assets,
   loading,
 }: GenerationPreviewPanelProps) {
   const activeTask = tasks.find(
     (task) => task.status === 'pending' || task.status === 'processing',
   );
-  const latestAsset = assets[0];
+  const latestAsset = getLatestOutputAsset(tasks);
   const showProcessing = loading || Boolean(activeTask);
   const prompt =
     typeof latestAsset?.metadata.prompt === 'string'
@@ -82,14 +81,6 @@ export function GenerationPreviewPanel({
               className="absolute inset-0 h-full w-full"
               mediaClassName="h-full w-full object-cover"
             />
-            {prompt ? (
-              <div className="pointer-events-none absolute bottom-md left-md right-md flex gap-md">
-                <div className="glass-panel flex-1 rounded-lg border border-white/10 bg-surface/40 p-sm backdrop-blur-md">
-                  <p className="text-label-sm font-bold text-on-surface">提示词</p>
-                  <p className="text-xs text-on-surface-variant">{prompt.slice(0, 120)}</p>
-                </div>
-              </div>
-            ) : null}
           </div>
         ) : null}
 

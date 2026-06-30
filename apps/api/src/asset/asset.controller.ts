@@ -1,7 +1,17 @@
-import { Controller, Get, Param, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Query,
+  Req,
+} from '@nestjs/common';
 import { AssetType } from '@prisma/client';
 import type { Request } from 'express';
 import { AssetService } from './asset.service';
+import { RenameAssetDto } from './dto/rename-asset.dto';
 import { StorageService } from '../storage/storage.service';
 
 type AuthRequest = Request & { user: { id: string; email: string } };
@@ -27,13 +37,32 @@ export class AssetController {
     );
   }
 
-  @Get(':id')
-  getOne(@Req() req: AuthRequest, @Param('id') id: string) {
-    return this.assets.getForUser(req.user.id, id);
+  @Get(':id/compose-context')
+  getComposeContext(@Req() req: AuthRequest, @Param('id') id: string) {
+    return this.assets.getComposeContext(req.user.id, id);
   }
 
   @Get(':id/download')
   getDownload(@Req() req: AuthRequest, @Param('id') id: string) {
     return this.assets.getDownloadUrl(req.user.id, id);
+  }
+
+  @Get(':id')
+  getOne(@Req() req: AuthRequest, @Param('id') id: string) {
+    return this.assets.getForUser(req.user.id, id);
+  }
+
+  @Patch(':id')
+  rename(
+    @Req() req: AuthRequest,
+    @Param('id') id: string,
+    @Body() dto: RenameAssetDto,
+  ) {
+    return this.assets.renameForUser(req.user.id, id, dto.title);
+  }
+
+  @Delete(':id')
+  remove(@Req() req: AuthRequest, @Param('id') id: string) {
+    return this.assets.softDeleteForUser(req.user.id, id);
   }
 }

@@ -71,6 +71,7 @@ model Asset {
   mimeType  String
   metadata  Json
   createdAt DateTime  @default(now())
+  deletedAt DateTime?
 
   user User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   task GenerationTask? @relation(fields: [taskId], references: [id], onDelete: SetNull)
