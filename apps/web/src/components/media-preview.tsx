@@ -8,6 +8,7 @@ type MediaPreviewProps = {
   src: string;
   type: 'image' | 'video';
   title?: string;
+  variant?: 'thumbnail' | 'full';
   className?: string;
   mediaClassName?: string;
   muted?: boolean;
@@ -18,6 +19,7 @@ export function MediaPreview({
   src,
   type,
   title,
+  variant = 'full',
   className,
   mediaClassName,
   muted = true,
@@ -25,6 +27,14 @@ export function MediaPreview({
 }: MediaPreviewProps) {
   const [open, setOpen] = useState(false);
   const isVideo = type === 'video';
+  const useVideoThumbnail = isVideo && variant === 'thumbnail';
+
+  function showVideoPoster(event: React.SyntheticEvent<HTMLVideoElement>) {
+    const video = event.currentTarget;
+    if (video.currentTime === 0) {
+      video.currentTime = 0.1;
+    }
+  }
 
   return (
     <>
@@ -36,13 +46,23 @@ export function MediaPreview({
         }`}
         aria-label={isVideo ? '播放预览' : '放大预览'}
       >
-        {isVideo ? (
+        {useVideoThumbnail ? (
           <video
             src={src}
             className={mediaClassName ?? 'h-full w-full object-cover'}
             muted={muted}
             playsInline
             preload="metadata"
+            onLoadedMetadata={showVideoPoster}
+          />
+        ) : isVideo ? (
+          <video
+            src={src}
+            className={mediaClassName ?? 'h-full w-full object-cover'}
+            muted={muted}
+            playsInline
+            preload="metadata"
+            onLoadedMetadata={showVideoPoster}
           />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element

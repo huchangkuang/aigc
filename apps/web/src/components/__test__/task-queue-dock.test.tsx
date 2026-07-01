@@ -18,11 +18,11 @@ describe('TaskQueueDock', () => {
       />,
     );
 
-    expect(screen.getByText('任务队列')).toBeInTheDocument();
+    expect(screen.getByText('当前任务')).toBeInTheDocument();
     expect(screen.getByText('1 / 1')).toBeInTheDocument();
     expect(screen.queryByText('test')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /任务队列/ }));
+    fireEvent.click(screen.getByRole('button', { name: /当前任务/ }));
     expect(screen.getByText('test')).toBeInTheDocument();
   });
 });

@@ -14,11 +14,17 @@ export type PersistedObject = {
   mimeType: string;
 };
 
+type SignedUrlCacheEntry = {
+  url: string;
+  expiresAt: number;
+};
+
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
   private readonly client: OSS | null;
   private readonly mockMode: boolean;
+  private readonly signedUrlCache = new Map<string, SignedUrlCacheEntry>();
 
   constructor(private readonly config: ConfigService) {
     this.mockMode = config.get<string>('STORAGE_MOCK') === 'true';
@@ -119,8 +125,19 @@ export class StorageService {
         '对象存储未配置，请设置 STORAGE_MOCK=true 或填写 OSS 凭证',
       );
     }
+
+    const cached = this.signedUrlCache.get(ossKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.url;
+    }
+
     try {
-      return this.client.signatureUrl(ossKey, { expires: expiresSeconds });
+      const url = this.client.signatureUrl(ossKey, { expires: expiresSeconds });
+      this.signedUrlCache.set(ossKey, {
+        url,
+        expiresAt: Date.now() + expiresSeconds * 0.9 * 1000,
+      });
+      return url;
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'unknown error';
       this.logger.error(`OSS signatureUrl failed: ${detail}`);

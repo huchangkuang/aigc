@@ -14,6 +14,7 @@ export type LoginResponse = {
 export type TaskAsset = {
   id: string;
   type: 'image' | 'video';
+  ossKey?: string;
   previewUrl?: string;
   mimeType: string;
   metadata: Record<string, unknown>;
@@ -30,9 +31,18 @@ export type GenerationTask = {
   createdAt: string;
 };
 
+export type ActiveGenerationTask = {
+  id: string;
+  type: string;
+  status: string;
+  errorMessage?: string | null;
+  createdAt: string;
+};
+
 export type Asset = {
   id: string;
   type: 'image' | 'video';
+  ossKey?: string;
   previewUrl?: string;
   mimeType: string;
   metadata: Record<string, unknown>;
@@ -103,6 +113,9 @@ export const api = {
   },
   listTasks() {
     return apiFetch<GenerationTask[]>('/generation-tasks');
+  },
+  listActiveTasks() {
+    return apiFetch<ActiveGenerationTask[]>('/generation-tasks/active');
   },
   createTask(body: Record<string, unknown>) {
     return apiFetch<GenerationTask>('/generation-tasks', {

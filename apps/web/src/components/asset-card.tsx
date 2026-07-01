@@ -61,12 +61,12 @@ export function AssetCard({ asset, onChanged }: AssetCardProps) {
           </div>
         ) : null}
 
-        <div className="absolute bottom-3 left-3">
+        <div className="pointer-events-none absolute bottom-3 left-3">
           <span
-            className={`rounded px-2 py-1 text-[10px] font-bold tracking-wider backdrop-blur-md ${
+            className={`rounded px-2 py-1 text-[10px] font-bold tracking-wider shadow-sm backdrop-blur-md ${
               asset.type === 'video'
-                ? 'bg-secondary/20 text-secondary'
-                : 'bg-primary/20 text-primary'
+                ? 'bg-black/70 text-white ring-1 ring-secondary/40'
+                : 'bg-black/70 text-white ring-1 ring-primary/40'
             }`}
           >
             {asset.type === 'video' ? '视频' : '图片'}

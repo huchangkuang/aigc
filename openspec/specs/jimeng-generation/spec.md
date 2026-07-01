@@ -56,9 +56,28 @@ The system SHALL poll Jimeng `CVSync2AsyncGetResult` for tasks in `pending` or `
 - **WHEN** Jimeng returns a non-10000 code or failed status
 - **THEN** the GenerationTask is marked `failed` with error message stored
 
+### Requirement: Active generation tasks can be queried without asset URLs
+
+The system SHALL expose `GET /generation-tasks/active` for authenticated users, returning only tasks in `pending` or `processing` status with fields sufficient for progress display (`id`, `status`, `errorMessage`, `type`, `createdAt`), without asset data or signed OSS URLs.
+
+#### Scenario: List active tasks
+
+- **WHEN** user requests `GET /generation-tasks/active` and has tasks in `pending` or `processing`
+- **THEN** the response includes only those tasks with status fields and no `previewUrl` or asset signing
+
+#### Scenario: No active tasks
+
+- **WHEN** user requests `GET /generation-tasks/active` and all tasks are `done` or `failed`
+- **THEN** the response is an empty array
+
+#### Scenario: Active endpoint excludes other users tasks
+
+- **WHEN** user requests `GET /generation-tasks/active`
+- **THEN** the response includes only tasks owned by that user
+
 ### Requirement: User can query own generation tasks
 
-The system SHALL allow authenticated users to list and retrieve their generation tasks with current status.
+The system SHALL allow authenticated users to list and retrieve their generation tasks with current status. The full list endpoint `GET /generation-tasks` SHALL include signed preview URLs for assets and is intended for initial load and post-completion refresh, not for high-frequency status polling.
 
 #### Scenario: List recent tasks
 

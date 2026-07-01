@@ -1,16 +1,16 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   GenerationComposer,
   type GenerationType,
   type ReferencePreview,
 } from '@/components/generation-composer';
-import { GenerationHistoryGrid } from '@/components/generation-history-grid';
 import { GenerationPreviewPanel } from '@/components/generation-preview-panel';
 import { TaskQueueDock } from '@/components/task-queue-dock';
 import { api, type GenerationTask } from '@/lib/api-client';
 import { hasActiveTasks } from '@/lib/generation-output';
+import { mergeTasksWithStableUrls } from '@/lib/merge-tasks-stable-urls';
 import { consumeComposerDraft } from '@/stores/composer-draft-store';
 import { toast } from '@/stores/toast-store';
 
@@ -39,16 +39,81 @@ export default function GeneratePage() {
   const [templateId, setTemplateId] = useState('hitchcock_dolly_in');
   const [cameraStrength, setCameraStrength] = useState('medium');
   const [tasks, setTasks] = useState<GenerationTask[]>([]);
+  const sessionTaskIdsRef = useRef<string[]>([]);
   const [pollingTasks, setPollingTasks] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const refreshTasks = useCallback(async () => {
+  function updateSessionTaskIds(ids: string[]) {
+    sessionTaskIdsRef.current = ids;
+  }
+
+  async function refreshSession(ids = sessionTaskIdsRef.current) {
+    if (ids.length === 0) {
+      setTasks([]);
+      setPollingTasks(false);
+      return;
+    }
+
     const data = await api.listTasks();
-    setTasks(data);
-    setPollingTasks(hasActiveTasks(data));
-    return data;
-  }, []);
+    const session = data.filter((task) => ids.includes(task.id));
+    setTasks((current) => {
+      const merged = mergeTasksWithStableUrls(current, session);
+      setPollingTasks(hasActiveTasks(merged));
+      return merged;
+    });
+  }
+
+  async function resumeActiveSession() {
+    const active = await api.listActiveTasks();
+    if (active.length === 0) return;
+
+    const ids = active.map((task) => task.id);
+    updateSessionTaskIds(ids);
+    await refreshSession(ids);
+  }
+
+  async function pollActive() {
+    const active = await api.listActiveTasks();
+    if (active.length === 0) {
+      await refreshSession();
+      return;
+    }
+
+    const activeIds = active.map((item) => item.id);
+    const mergedIds = Array.from(new Set([...sessionTaskIdsRef.current, ...activeIds]));
+    if (mergedIds.length !== sessionTaskIdsRef.current.length) {
+      updateSessionTaskIds(mergedIds);
+    }
+
+    setTasks((prev) => {
+      let updated = prev.map((task) => {
+        const match = active.find((item) => item.id === task.id);
+        if (!match) return task;
+        return {
+          ...task,
+          status: match.status,
+          errorMessage: match.errorMessage,
+        };
+      });
+
+      for (const item of active) {
+        if (!prev.some((task) => task.id === item.id)) {
+          updated = [
+            {
+              ...item,
+              inputParams: {},
+              assets: [],
+            },
+            ...updated,
+          ];
+        }
+      }
+
+      setPollingTasks(true);
+      return updated;
+    });
+  }
 
   const references = useMemo<ReferencePreview[]>(() => {
     const confirmed = parseImageUrls(imageUrls).map((url, index) => ({
@@ -64,8 +129,8 @@ export default function GeneratePage() {
   }, [imageUrls, pendingRefs]);
 
   useEffect(() => {
-    refreshTasks().catch(() => undefined);
-  }, [refreshTasks]);
+    resumeActiveSession().catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     const draft = consumeComposerDraft();
@@ -95,12 +160,40 @@ export default function GeneratePage() {
   useEffect(() => {
     if (!pollingTasks) return;
 
-    const timer = setInterval(() => {
-      refreshTasks().catch(() => undefined);
-    }, TASK_POLL_INTERVAL_MS);
+    let timer: ReturnType<typeof setInterval> | null = null;
 
-    return () => clearInterval(timer);
-  }, [pollingTasks, refreshTasks]);
+    const start = () => {
+      if (timer !== null) return;
+      timer = setInterval(() => {
+        pollActive().catch(() => undefined);
+      }, TASK_POLL_INTERVAL_MS);
+    };
+
+    const stop = () => {
+      if (timer === null) return;
+      clearInterval(timer);
+      timer = null;
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        stop();
+        return;
+      }
+      pollActive().catch(() => undefined);
+      start();
+    };
+
+    if (document.visibilityState !== 'hidden') {
+      start();
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [pollingTasks]);
 
   function removeReference(id: string) {
     if (id.startsWith('confirmed-')) {
@@ -171,10 +264,12 @@ export default function GeneratePage() {
         body.camera_strength = cameraStrength;
       }
 
-      await api.createTask(body);
+      const created = await api.createTask(body);
+      const nextIds = [created.id, ...sessionTaskIdsRef.current];
+      updateSessionTaskIds(nextIds);
       setMessage('任务已提交，正在生成…');
       toast('任务已提交，正在生成…', 'success');
-      await refreshTasks();
+      await refreshSession(nextIds);
     } catch (error) {
       const text = error instanceof Error ? error.message : '提交失败';
       setMessage(text);
@@ -188,7 +283,7 @@ export default function GeneratePage() {
     <div className="space-y-gutter">
       <div className="flex flex-col justify-between gap-md md:flex-row md:items-end">
         <div>
-          <h2 className="text-headline-lg text-on-surface">创作中心-测试部署</h2>
+          <h2 className="text-headline-lg text-on-surface">创作中心</h2>
           <p className="mt-1 text-on-surface-variant">接入即梦引擎，将创意转化为图片与视频素材</p>
         </div>
         <div className="flex items-center gap-sm">
@@ -226,9 +321,8 @@ export default function GeneratePage() {
           />
         </div>
 
-        <div className="col-span-12 space-y-gutter lg:col-span-5">
+        <div className="col-span-12 lg:col-span-5">
           <GenerationPreviewPanel tasks={tasks} loading={loading} />
-          <GenerationHistoryGrid tasks={tasks} />
         </div>
       </div>
 

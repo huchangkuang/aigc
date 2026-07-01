@@ -22,7 +22,10 @@ export function TaskQueueDock({ tasks }: TaskQueueDockProps) {
       {expanded ? (
         <div className="glass-panel w-full overflow-hidden rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
           <div className="max-h-80 overflow-y-auto p-md">
-            <GenerationTaskList tasks={tasks} />
+            <GenerationTaskList
+              tasks={tasks}
+              emptyMessage="暂无当前任务，提交生成后将在此显示"
+            />
           </div>
         </div>
       ) : null}
@@ -32,7 +35,7 @@ export function TaskQueueDock({ tasks }: TaskQueueDockProps) {
         onClick={() => setExpanded((v) => !v)}
         className="glass-panel flex w-full items-center justify-between gap-3 rounded-full px-5 py-3 shadow-[0_4px_24px_rgba(0,0,0,0.35)] transition-all hover:border-primary/30"
       >
-        <span className="text-sm font-medium text-on-surface">任务队列</span>
+        <span className="text-sm font-medium text-on-surface">当前任务</span>
 
         <div className="flex items-center gap-2">
           {activeCount > 0 ? (

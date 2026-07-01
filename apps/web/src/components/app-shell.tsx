@@ -9,6 +9,7 @@ const SIDEBAR_WIDTH = 'w-56';
 
 const navLinks = [
   { href: '/generate', label: '素材生成', icon: 'auto_awesome' },
+  { href: '/tasks', label: '任务中心', icon: 'playlist_play' },
   { href: '/assets', label: '资产库', icon: 'collections' },
 ] as const;
 
@@ -75,26 +76,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <header className="fixed left-56 right-0 top-0 z-40 flex h-14 items-center justify-end border-b border-primary/10 bg-surface/70 px-gutter backdrop-blur-xl">
-        <div className="flex items-center gap-md">
-          <div className="group relative hidden w-56 sm:block">
-            <Icon
-              name="search"
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant transition-colors group-focus-within:text-primary"
-            />
-            <input
-              type="search"
-              placeholder="搜索资产…"
-              className="w-full rounded-full border border-outline-variant bg-surface-container-low py-1.5 pl-10 pr-4 text-sm text-on-surface outline-none transition-all placeholder:text-outline-variant focus:border-primary focus:ring-1 focus:ring-primary"
-            />
-          </div>
-          <button type="button" className="p-2 text-on-surface-variant transition-colors hover:text-primary">
-            <Icon name="notifications" />
-          </button>
-        </div>
-      </header>
-
-      <main className="ml-56 min-h-screen overflow-y-auto pt-14">
+      <main className="ml-56 min-h-screen overflow-y-auto">
         <div className="mx-auto max-w-[1400px] p-gutter">{children}</div>
       </main>
     </div>

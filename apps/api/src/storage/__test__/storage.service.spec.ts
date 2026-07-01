@@ -2,7 +2,42 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { StorageService } from '../storage.service';
 
+const signatureUrl = jest.fn();
+
+jest.mock('ali-oss', () => {
+  return jest.fn().mockImplementation(() => ({
+    put: jest.fn(),
+    signatureUrl: (...args: unknown[]) => signatureUrl(...args),
+  }));
+});
+
+function createOssModule() {
+  return Test.createTestingModule({
+    providers: [
+      StorageService,
+      {
+        provide: ConfigService,
+        useValue: {
+          get: jest.fn((key: string) => {
+            const values: Record<string, string> = {
+              OSS_REGION: 'oss-cn-hangzhou',
+              OSS_ACCESS_KEY_ID: 'key',
+              OSS_ACCESS_KEY_SECRET: 'secret',
+              OSS_BUCKET: 'bucket',
+            };
+            return values[key];
+          }),
+        },
+      },
+    ],
+  }).compile();
+}
+
 describe('StorageService', () => {
+  beforeEach(() => {
+    signatureUrl.mockReset();
+  });
+
   it('uploads in mock mode', async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -80,5 +115,41 @@ describe('StorageService', () => {
     expect(result.ossKey).toBe('assets/u1/asset1.png');
 
     global.fetch = originalFetch;
+  });
+
+  it('returns the same signed url for the same ossKey within cache ttl', async () => {
+    signatureUrl
+      .mockReturnValueOnce('https://bucket.oss.com/a1.png?sig=1')
+      .mockReturnValueOnce('https://bucket.oss.com/a1.png?sig=2');
+
+    const module = await createOssModule();
+    const service = module.get(StorageService);
+
+    const first = await service.getSignedUrl('assets/u1/a1.png');
+    const second = await service.getSignedUrl('assets/u1/a1.png');
+
+    expect(first).toBe('https://bucket.oss.com/a1.png?sig=1');
+    expect(second).toBe(first);
+    expect(signatureUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it('generates a new signed url after cache ttl expires', async () => {
+    jest.useFakeTimers();
+    signatureUrl
+      .mockReturnValueOnce('https://bucket.oss.com/a1.png?sig=1')
+      .mockReturnValueOnce('https://bucket.oss.com/a1.png?sig=2');
+
+    const module = await createOssModule();
+    const service = module.get(StorageService);
+
+    const first = await service.getSignedUrl('assets/u1/a1.png', 100);
+    jest.advanceTimersByTime(91_000);
+    const second = await service.getSignedUrl('assets/u1/a1.png', 100);
+
+    expect(first).toBe('https://bucket.oss.com/a1.png?sig=1');
+    expect(second).toBe('https://bucket.oss.com/a1.png?sig=2');
+    expect(signatureUrl).toHaveBeenCalledTimes(2);
+
+    jest.useRealTimers();
   });
 });

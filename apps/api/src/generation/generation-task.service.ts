@@ -77,6 +77,23 @@ export class GenerationTaskService {
     });
   }
 
+  listActiveForUser(userId: string) {
+    return this.prisma.generationTask.findMany({
+      where: {
+        userId,
+        status: { in: [GenerationStatus.pending, GenerationStatus.processing] },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        status: true,
+        errorMessage: true,
+        type: true,
+        createdAt: true,
+      },
+    });
+  }
+
   async getForUser(userId: string, id: string) {
     const task = await this.prisma.generationTask.findFirst({
       where: { id, userId },

@@ -6,6 +6,7 @@ describe('GenerationController', () => {
   const tasks = {
     create: jest.fn(),
     listForUser: jest.fn(),
+    listActiveForUser: jest.fn(),
     getForUser: jest.fn(),
   };
   const storage = {
@@ -56,5 +57,29 @@ describe('GenerationController', () => {
         ],
       },
     ]);
+  });
+
+  it('GET active lists only pending/processing tasks without signed urls', async () => {
+    tasks.listActiveForUser.mockResolvedValue([
+      {
+        id: 't1',
+        status: 'processing',
+        errorMessage: null,
+        type: 'video_t2v',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+
+    await expect(controller.listActive(req as never)).resolves.toEqual([
+      {
+        id: 't1',
+        status: 'processing',
+        errorMessage: null,
+        type: 'video_t2v',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+    expect(tasks.listActiveForUser).toHaveBeenCalledWith('u1');
+    expect(storage.getSignedUrl).not.toHaveBeenCalled();
   });
 });

@@ -25,18 +25,26 @@ const statusColor: Record<string, string> = {
   failed: 'text-error',
 };
 
-export function GenerationTaskList({ tasks }: { tasks: GenerationTask[] }) {
+export function GenerationTaskList({
+  tasks,
+  emptyMessage = '暂无任务记录',
+  listClassName = 'max-h-64',
+}: {
+  tasks: GenerationTask[];
+  emptyMessage?: string;
+  listClassName?: string;
+}) {
   if (!tasks.length) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg py-8 text-center">
         <Icon name="hourglass_empty" className="mb-3 text-3xl text-on-surface-variant" />
-        <p className="text-sm text-on-surface-variant">暂无任务，提交后将在此显示进度</p>
+        <p className="text-sm text-on-surface-variant">{emptyMessage}</p>
       </div>
     );
   }
 
   return (
-    <ul className="max-h-64 space-y-3 overflow-y-auto">
+    <ul className={`space-y-3 overflow-y-auto ${listClassName}`}>
       {tasks.map((task) => (
         <li
           key={task.id}

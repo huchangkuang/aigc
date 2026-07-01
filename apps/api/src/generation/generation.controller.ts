@@ -34,6 +34,11 @@ export class GenerationController {
     );
   }
 
+  @Get('active')
+  listActive(@Req() req: AuthRequest) {
+    return this.tasks.listActiveForUser(req.user.id);
+  }
+
   @Get(':id')
   getOne(@Req() req: AuthRequest, @Param('id') id: string) {
     return this.tasks.getForUser(req.user.id, id);

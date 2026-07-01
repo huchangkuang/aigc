@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { AssetCard } from '@/components/asset-card';
 import { Icon } from '@/components/icon';
+import { getAssetDisplayTitle } from '@/lib/asset-display';
 import { api, type Asset } from '@/lib/api-client';
 
 const filters = [
@@ -16,8 +17,21 @@ type FilterType = (typeof filters)[number]['value'];
 
 export default function AssetsPage() {
   const [type, setType] = useState<FilterType>('all');
+  const [query, setQuery] = useState('');
   const [assets, setAssets] = useState<Asset[]>([]);
   const [error, setError] = useState('');
+
+  const keyword = query.trim().toLowerCase();
+  const visibleAssets = keyword
+    ? assets.filter((asset) => {
+        const title = getAssetDisplayTitle(asset).toLowerCase();
+        const prompt =
+          typeof asset.metadata.prompt === 'string'
+            ? asset.metadata.prompt.toLowerCase()
+            : '';
+        return title.includes(keyword) || prompt.includes(keyword);
+      })
+    : assets;
 
   function loadAssets() {
     api
@@ -31,9 +45,8 @@ export default function AssetsPage() {
   }, [type]);
 
   return (
-    <div className="pb-xl">
-      {/* Header & Filters */}
-      <section className="flex flex-col justify-between gap-md py-lg md:flex-row md:items-end">
+    <div className="space-y-gutter">
+      <section className="flex flex-col justify-between gap-md md:flex-row md:items-end">
         <div>
           <h2 className="text-headline-lg text-primary">资产画廊</h2>
           <p className="text-body-md mt-1 text-on-surface-variant">
@@ -41,8 +54,23 @@ export default function AssetsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-xs rounded-lg border border-primary/10 bg-surface-container-high p-1">
-          {filters.map((filter) => {
+        <div className="flex flex-col gap-sm sm:flex-row sm:items-center">
+          <div className="group relative w-full sm:w-56">
+            <Icon
+              name="search"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant transition-colors group-focus-within:text-primary"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="搜索资产…"
+              className="w-full rounded-full border border-outline-variant bg-surface-container-low py-1.5 pl-10 pr-4 text-sm text-on-surface outline-none transition-all placeholder:text-outline-variant focus:border-primary focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          <div className="flex items-center gap-xs rounded-lg border border-primary/10 bg-surface-container-high p-1">
+            {filters.map((filter) => {
             const active = type === filter.value;
             return (
               <button
@@ -59,6 +87,7 @@ export default function AssetsPage() {
               </button>
             );
           })}
+          </div>
         </div>
       </section>
 
@@ -83,11 +112,17 @@ export default function AssetsPage() {
             去生成素材
           </Link>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-md pb-xl sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {assets.map((asset) => (
+      ) : visibleAssets.length ? (
+        <div className="grid grid-cols-1 gap-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {visibleAssets.map((asset) => (
             <AssetCard key={asset.id} asset={asset} onChanged={loadAssets} />
           ))}
+        </div>
+      ) : (
+        <div className="glass-panel flex flex-col items-center justify-center rounded-xl border border-outline-variant/30 p-xl text-center">
+          <Icon name="search" className="mb-md text-5xl text-on-surface-variant" />
+          <p className="text-body-md text-on-surface-variant">没有匹配的资产</p>
+          <p className="text-label-sm mt-xs text-on-surface-variant">试试其他关键词</p>
         </div>
       )}
     </div>
