@@ -2,6 +2,7 @@
 
 import { Icon } from '@/components/icon';
 import { AssetCardMenu } from '@/components/asset-card-menu';
+import { TrashAssetCardMenu } from '@/components/trash-asset-card-menu';
 import { MediaPreview } from '@/components/media-preview';
 import { getAssetDisplayTitle } from '@/lib/asset-display';
 import type { Asset } from '@/lib/api-client';
@@ -24,10 +25,12 @@ function assetTags(asset: Asset): string[] {
 type AssetCardProps = {
   asset: Asset;
   onChanged: () => void;
+  variant?: 'library' | 'trash';
 };
 
-export function AssetCard({ asset, onChanged }: AssetCardProps) {
+export function AssetCard({ asset, onChanged, variant = 'library' }: AssetCardProps) {
   const title = getAssetDisplayTitle(asset);
+  const dateLabel = variant === 'trash' && asset.deletedAt ? asset.deletedAt : asset.createdAt;
 
   return (
     <article className="asset-card glass-panel group flex flex-col overflow-hidden rounded-xl transition-all duration-300">
@@ -57,7 +60,11 @@ export function AssetCard({ asset, onChanged }: AssetCardProps) {
             >
               <Icon name="download" className="text-sm" />
             </a>
-            <AssetCardMenu asset={asset} onChanged={onChanged} />
+            {variant === 'trash' ? (
+              <TrashAssetCardMenu asset={asset} onChanged={onChanged} />
+            ) : (
+              <AssetCardMenu asset={asset} onChanged={onChanged} />
+            )}
           </div>
         ) : null}
 
@@ -77,7 +84,8 @@ export function AssetCard({ asset, onChanged }: AssetCardProps) {
       <div className="space-y-xs p-md">
         <h3 className="truncate font-bold text-on-surface">{title}</h3>
         <p className="text-label-sm font-code-md text-on-surface-variant">
-          {formatDate(asset.createdAt)}
+          {variant === 'trash' ? '删除于 ' : ''}
+          {formatDate(dateLabel)}
         </p>
         <div className="mt-sm flex flex-wrap gap-xs">
           {assetTags(asset).map((tag) => (

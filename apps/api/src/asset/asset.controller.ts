@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Query,
   Req,
 } from '@nestjs/common';
@@ -37,6 +38,20 @@ export class AssetController {
     );
   }
 
+  @Get('trash')
+  async listTrash(
+    @Req() req: AuthRequest,
+    @Query('type') type?: AssetType,
+  ) {
+    const items = await this.assets.listTrashForUser(req.user.id, type);
+    return Promise.all(
+      items.map(async (asset) => ({
+        ...asset,
+        previewUrl: await this.storage.getSignedUrl(asset.ossKey),
+      })),
+    );
+  }
+
   @Get(':id/compose-context')
   getComposeContext(@Req() req: AuthRequest, @Param('id') id: string) {
     return this.assets.getComposeContext(req.user.id, id);
@@ -59,6 +74,16 @@ export class AssetController {
     @Body() dto: RenameAssetDto,
   ) {
     return this.assets.renameForUser(req.user.id, id, dto.title);
+  }
+
+  @Post(':id/restore')
+  restore(@Req() req: AuthRequest, @Param('id') id: string) {
+    return this.assets.restoreForUser(req.user.id, id);
+  }
+
+  @Delete(':id/permanent')
+  destroyPermanent(@Req() req: AuthRequest, @Param('id') id: string) {
+    return this.assets.destroyForUser(req.user.id, id);
   }
 
   @Delete(':id')

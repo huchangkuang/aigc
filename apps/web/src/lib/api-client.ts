@@ -1,4 +1,11 @@
+import { toast } from '@/stores/toast-store';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+
+export type ApiOptions = {
+  /** 为 true 时不弹出错误 toast（登录 inline、轮询等场景） */
+  silent?: boolean;
+};
 
 export type ApiEnvelope<T> = {
   code: number;
@@ -47,6 +54,7 @@ export type Asset = {
   mimeType: string;
   metadata: Record<string, unknown>;
   createdAt: string;
+  deletedAt?: string;
 };
 
 export type ComposeContext = {
@@ -75,7 +83,16 @@ export function clearAuthToken() {
   document.cookie = 'auth-token=; path=/; max-age=0';
 }
 
-async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+function fail(message: string, silent?: boolean): never {
+  if (!silent) toast(message, 'error');
+  throw new Error(message);
+}
+
+async function apiFetch<T>(
+  path: string,
+  init: RequestInit = {},
+  options: ApiOptions = {},
+): Promise<T> {
   const token = getToken();
   const headers = new Headers(init.headers);
   if (!headers.has('Content-Type') && init.body && !(init.body instanceof FormData)) {
@@ -94,11 +111,11 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     body = (await response.json()) as ApiEnvelope<T>;
   } catch {
-    throw new Error(response.statusText || '请求失败');
+    fail(response.statusText || '请求失败', options.silent);
   }
 
   if (body.code !== 0) {
-    throw new Error(body.message || '请求失败');
+    fail(body.message || '请求失败', options.silent);
   }
 
   return body.data;
@@ -106,16 +123,20 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export const api = {
   login(email: string, password: string) {
-    return apiFetch<LoginResponse>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
+    return apiFetch<LoginResponse>(
+      '/auth/login',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      },
+      { silent: true },
+    );
   },
-  listTasks() {
-    return apiFetch<GenerationTask[]>('/generation-tasks');
+  listTasks(options?: ApiOptions) {
+    return apiFetch<GenerationTask[]>('/generation-tasks', {}, options);
   },
-  listActiveTasks() {
-    return apiFetch<ActiveGenerationTask[]>('/generation-tasks/active');
+  listActiveTasks(options?: ApiOptions) {
+    return apiFetch<ActiveGenerationTask[]>('/generation-tasks/active', {}, options);
   },
   createTask(body: Record<string, unknown>) {
     return apiFetch<GenerationTask>('/generation-tasks', {
@@ -135,6 +156,20 @@ export const api = {
   },
   deleteAsset(id: string) {
     return apiFetch<{ id: string }>(`/assets/${id}`, {
+      method: 'DELETE',
+    });
+  },
+  listTrashAssets(type?: string) {
+    const query = type ? `?type=${type}` : '';
+    return apiFetch<Asset[]>(`/assets/trash${query}`);
+  },
+  restoreAsset(id: string) {
+    return apiFetch<Asset>(`/assets/${id}/restore`, {
+      method: 'POST',
+    });
+  },
+  destroyAsset(id: string) {
+    return apiFetch<{ id: string }>(`/assets/${id}/permanent`, {
       method: 'DELETE',
     });
   },

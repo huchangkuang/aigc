@@ -63,8 +63,6 @@ export function AssetCardMenu({ asset, onChanged }: AssetCardMenuProps) {
 
       setComposerDraft(buildComposerDraft(context, mode));
       router.push('/generate');
-    } catch (error) {
-      toast(error instanceof Error ? error.message : '操作失败', 'error');
     } finally {
       setBusy(false);
     }
@@ -82,8 +80,6 @@ export function AssetCardMenu({ asset, onChanged }: AssetCardMenuProps) {
       setRenameOpen(false);
       toast('重命名成功', 'success');
       onChanged();
-    } catch (error) {
-      toast(error instanceof Error ? error.message : '重命名失败', 'error');
     } finally {
       setBusy(false);
     }
@@ -96,8 +92,6 @@ export function AssetCardMenu({ asset, onChanged }: AssetCardMenuProps) {
       setDeleteOpen(false);
       toast('资产已删除', 'success');
       onChanged();
-    } catch (error) {
-      toast(error instanceof Error ? error.message : '删除失败', 'error');
     } finally {
       setBusy(false);
     }
@@ -163,7 +157,7 @@ export function AssetCardMenu({ asset, onChanged }: AssetCardMenuProps) {
       <ConfirmDialog
         open={deleteOpen}
         title="删除资产"
-        description="删除后资产将从画廊中移除，此操作不可撤销。"
+        description="删除后资产将移入回收站，可在回收站中恢复或永久销毁。"
         confirmLabel="删除"
         onConfirm={handleDelete}
         onCancel={() => setDeleteOpen(false)}

@@ -55,7 +55,7 @@ export default function GeneratePage() {
       return;
     }
 
-    const data = await api.listTasks();
+    const data = await api.listTasks({ silent: true });
     const session = data.filter((task) => ids.includes(task.id));
     setTasks((current) => {
       const merged = mergeTasksWithStableUrls(current, session);
@@ -65,7 +65,7 @@ export default function GeneratePage() {
   }
 
   async function resumeActiveSession() {
-    const active = await api.listActiveTasks();
+    const active = await api.listActiveTasks({ silent: true });
     if (active.length === 0) return;
 
     const ids = active.map((task) => task.id);
@@ -74,7 +74,7 @@ export default function GeneratePage() {
   }
 
   async function pollActive() {
-    const active = await api.listActiveTasks();
+    const active = await api.listActiveTasks({ silent: true });
     if (active.length === 0) {
       await refreshSession();
       return;
@@ -232,8 +232,6 @@ export default function GeneratePage() {
       const result = await api.uploadReference(file);
       setImageUrls((prev) => (prev ? `${prev}\n${result.url}` : result.url));
       toast('参考图已上传', 'success');
-    } catch (error) {
-      toast(error instanceof Error ? error.message : '上传失败', 'error');
     } finally {
       URL.revokeObjectURL(previewUrl);
       setPendingRefs((prev) => prev.filter((item) => item.id !== id));
@@ -270,10 +268,6 @@ export default function GeneratePage() {
       setMessage('任务已提交，正在生成…');
       toast('任务已提交，正在生成…', 'success');
       await refreshSession(nextIds);
-    } catch (error) {
-      const text = error instanceof Error ? error.message : '提交失败';
-      setMessage(text);
-      toast(text, 'error');
     } finally {
       setLoading(false);
     }

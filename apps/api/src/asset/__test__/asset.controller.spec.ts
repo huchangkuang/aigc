@@ -5,10 +5,13 @@ import { StorageService } from '../../storage/storage.service';
 describe('AssetController', () => {
   const assets = {
     listForUser: jest.fn(),
+    listTrashForUser: jest.fn(),
     getForUser: jest.fn(),
     getDownloadUrl: jest.fn(),
     renameForUser: jest.fn(),
     softDeleteForUser: jest.fn(),
+    restoreForUser: jest.fn(),
+    destroyForUser: jest.fn(),
     getComposeContext: jest.fn(),
   };
   const storage = {
@@ -65,5 +68,40 @@ describe('AssetController', () => {
       imageUrls: ['https://fresh/ref.png'],
       generationType: 'video_i2v_first',
     });
+  });
+
+  it('GET /assets/trash returns trashed list with preview urls', async () => {
+    assets.listTrashForUser.mockResolvedValue([
+      { id: 'a1', ossKey: 'assets/u1/a1.png', deletedAt: new Date() },
+    ]);
+    storage.getSignedUrl.mockResolvedValue('https://signed');
+
+    await expect(controller.listTrash(req as never)).resolves.toEqual([
+      {
+        id: 'a1',
+        ossKey: 'assets/u1/a1.png',
+        deletedAt: expect.any(Date),
+        previewUrl: 'https://signed',
+      },
+    ]);
+  });
+
+  it('POST /assets/:id/restore restores asset', async () => {
+    assets.restoreForUser.mockResolvedValue({ id: 'a1', deletedAt: null });
+
+    await expect(controller.restore(req as never, 'a1')).resolves.toEqual({
+      id: 'a1',
+      deletedAt: null,
+    });
+    expect(assets.restoreForUser).toHaveBeenCalledWith('u1', 'a1');
+  });
+
+  it('DELETE /assets/:id/permanent destroys asset', async () => {
+    assets.destroyForUser.mockResolvedValue({ id: 'a1' });
+
+    await expect(controller.destroyPermanent(req as never, 'a1')).resolves.toEqual({
+      id: 'a1',
+    });
+    expect(assets.destroyForUser).toHaveBeenCalledWith('u1', 'a1');
   });
 });

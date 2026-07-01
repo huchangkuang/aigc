@@ -11,6 +11,7 @@ const navLinks = [
   { href: '/generate', label: '素材生成', icon: 'auto_awesome' },
   { href: '/tasks', label: '任务中心', icon: 'playlist_play' },
   { href: '/assets', label: '资产库', icon: 'collections' },
+  { href: '/trash', label: '回收站', icon: 'delete' },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {

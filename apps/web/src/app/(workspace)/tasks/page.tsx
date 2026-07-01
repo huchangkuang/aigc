@@ -11,24 +11,23 @@ const TASK_POLL_INTERVAL_MS = 5000;
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<GenerationTask[]>([]);
-  const [error, setError] = useState('');
   const [polling, setPolling] = useState(false);
 
-  async function loadTasks() {
-    const data = await api.listTasks();
+  async function loadTasks(silent = false) {
+    const data = await api.listTasks(silent ? { silent: true } : undefined);
     setTasks(data);
     setPolling(hasActiveTasks(data));
   }
 
   useEffect(() => {
-    loadTasks().catch((err) => setError(err instanceof Error ? err.message : '加载失败'));
+    loadTasks().catch(() => undefined);
   }, []);
 
   useEffect(() => {
     if (!polling) return;
 
     const timer = setInterval(() => {
-      loadTasks().catch(() => undefined);
+      loadTasks(true).catch(() => undefined);
     }, TASK_POLL_INTERVAL_MS);
 
     return () => clearInterval(timer);
@@ -49,12 +48,6 @@ export default function TasksPage() {
           去生成素材
         </Link>
       </section>
-
-      {error ? (
-        <p className="rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">
-          {error}
-        </p>
-      ) : null}
 
       <div className="glass-panel rounded-xl p-md">
         <GenerationTaskList tasks={tasks} listClassName="max-h-none" />

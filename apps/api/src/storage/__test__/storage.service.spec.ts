@@ -3,10 +3,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { StorageService } from '../storage.service';
 
 const signatureUrl = jest.fn();
+const deleteObject = jest.fn();
 
 jest.mock('ali-oss', () => {
   return jest.fn().mockImplementation(() => ({
     put: jest.fn(),
+    delete: (...args: unknown[]) => deleteObject(...args),
     signatureUrl: (...args: unknown[]) => signatureUrl(...args),
   }));
 });
@@ -36,6 +38,7 @@ function createOssModule() {
 describe('StorageService', () => {
   beforeEach(() => {
     signatureUrl.mockReset();
+    deleteObject.mockReset();
   });
 
   it('uploads in mock mode', async () => {
@@ -151,5 +154,45 @@ describe('StorageService', () => {
     expect(signatureUrl).toHaveBeenCalledTimes(2);
 
     jest.useRealTimers();
+  });
+
+  it('deleteObject is no-op in mock mode', async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        StorageService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) => {
+              if (key === 'STORAGE_MOCK') return 'true';
+              return undefined;
+            }),
+          },
+        },
+      ],
+    }).compile();
+
+    const service = module.get(StorageService);
+    await expect(service.deleteObject('assets/u1/a1.png')).resolves.toBeUndefined();
+    expect(deleteObject).not.toHaveBeenCalled();
+  });
+
+  it('deleteObject removes object from oss', async () => {
+    deleteObject.mockResolvedValue(undefined);
+
+    const module = await createOssModule();
+    const service = module.get(StorageService);
+
+    await service.deleteObject('assets/u1/a1.png');
+    expect(deleteObject).toHaveBeenCalledWith('assets/u1/a1.png');
+  });
+
+  it('deleteObject treats missing key as success', async () => {
+    deleteObject.mockRejectedValue({ code: 'NoSuchKey', message: 'not found' });
+
+    const module = await createOssModule();
+    const service = module.get(StorageService);
+
+    await expect(service.deleteObject('assets/u1/missing.png')).resolves.toBeUndefined();
   });
 });

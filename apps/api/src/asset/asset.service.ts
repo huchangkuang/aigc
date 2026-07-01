@@ -104,6 +104,41 @@ export class AssetService {
     });
   }
 
+  listTrashForUser(userId: string, type?: AssetType) {
+    return this.prisma.asset.findMany({
+      where: {
+        userId,
+        deletedAt: { not: null },
+        ...(type ? { type } : {}),
+      },
+      orderBy: { deletedAt: 'desc' },
+    });
+  }
+
+  private async findTrashedForUser(userId: string, id: string) {
+    const asset = await this.prisma.asset.findFirst({
+      where: { id, userId, deletedAt: { not: null } },
+    });
+    if (!asset) {
+      throw new NotFoundException('Asset not found');
+    }
+    return asset;
+  }
+
+  async restoreForUser(userId: string, id: string) {
+    await this.findTrashedForUser(userId, id);
+    return this.prisma.asset.update({
+      where: { id },
+      data: { deletedAt: null },
+    });
+  }
+
+  async destroyForUser(userId: string, id: string) {
+    const asset = await this.findTrashedForUser(userId, id);
+    await this.storage.deleteObject(asset.ossKey);
+    return this.prisma.asset.delete({ where: { id } });
+  }
+
   async getComposeContext(userId: string, id: string) {
     const asset = await this.findActiveForUser(userId, id);
     const task = asset.taskId

@@ -77,4 +77,13 @@ describe('AssetCardMenu', () => {
       expect(push).not.toHaveBeenCalled();
     });
   });
+
+  it('shows trash confirmation when deleting', () => {
+    render(<AssetCardMenu asset={asset} onChanged={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '更多操作' }));
+    fireEvent.click(screen.getByRole('button', { name: '删除' }));
+
+    expect(screen.getByText(/移入回收站/)).toBeInTheDocument();
+  });
 });

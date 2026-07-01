@@ -15,7 +15,7 @@ const filters = [
 
 type FilterType = (typeof filters)[number]['value'];
 
-export default function AssetsPage() {
+export default function TrashPage() {
   const [type, setType] = useState<FilterType>('all');
   const [query, setQuery] = useState('');
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -33,7 +33,7 @@ export default function AssetsPage() {
     : assets;
 
   function loadAssets() {
-    api.listAssets(type === 'all' ? undefined : type).then(setAssets);
+    api.listTrashAssets(type === 'all' ? undefined : type).then(setAssets);
   }
 
   useEffect(() => {
@@ -44,9 +44,9 @@ export default function AssetsPage() {
     <div className="space-y-gutter">
       <section className="flex flex-col justify-between gap-md md:flex-row md:items-end">
         <div>
-          <h2 className="text-headline-lg text-primary">资产画廊</h2>
+          <h2 className="text-headline-lg text-primary">回收站</h2>
           <p className="text-body-md mt-1 text-on-surface-variant">
-            浏览与管理 AI 生成的图片与视频素材
+            已删除的资产可恢复或永久销毁
           </p>
         </div>
 
@@ -67,45 +67,50 @@ export default function AssetsPage() {
 
           <div className="flex items-center gap-xs rounded-lg border border-primary/10 bg-surface-container-high p-1">
             {filters.map((filter) => {
-            const active = type === filter.value;
-            return (
-              <button
-                key={filter.value}
-                type="button"
-                onClick={() => setType(filter.value)}
-                className={`rounded-md px-md py-1.5 text-sm font-medium transition-all ${
-                  active
-                    ? 'bg-primary text-on-primary shadow-lg'
-                    : 'text-on-surface-variant hover:bg-primary/10 hover:text-primary'
-                }`}
-              >
-                {filter.label}
-              </button>
-            );
-          })}
+              const active = type === filter.value;
+              return (
+                <button
+                  key={filter.value}
+                  type="button"
+                  onClick={() => setType(filter.value)}
+                  className={`rounded-md px-md py-1.5 text-sm font-medium transition-all ${
+                    active
+                      ? 'bg-primary text-on-primary shadow-lg'
+                      : 'text-on-surface-variant hover:bg-primary/10 hover:text-primary'
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>
 
       {!assets.length ? (
         <div className="glass-panel flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-primary/20 p-xl text-center">
-          <Icon name="collections" className="mb-md text-5xl text-on-surface-variant" />
-          <p className="text-body-md text-on-surface-variant">还没有资产</p>
+          <Icon name="delete" className="mb-md text-5xl text-on-surface-variant" />
+          <p className="text-body-md text-on-surface-variant">回收站是空的</p>
           <p className="text-label-sm mt-xs text-on-surface-variant">
-            在创作中心生成素材后，将自动出现在这里
+            从资产库删除的素材会出现在这里
           </p>
           <Link
-            href="/generate"
+            href="/assets"
             className="gradient-button mt-md inline-flex items-center gap-sm rounded-lg px-md py-sm text-sm font-bold text-on-primary"
           >
-            <Icon name="auto_awesome" className="text-base" />
-            去生成素材
+            <Icon name="collections" className="text-base" />
+            返回资产库
           </Link>
         </div>
       ) : visibleAssets.length ? (
         <div className="grid grid-cols-1 gap-md sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {visibleAssets.map((asset) => (
-            <AssetCard key={asset.id} asset={asset} onChanged={loadAssets} />
+            <AssetCard
+              key={asset.id}
+              asset={asset}
+              variant="trash"
+              onChanged={loadAssets}
+            />
           ))}
         </div>
       ) : (

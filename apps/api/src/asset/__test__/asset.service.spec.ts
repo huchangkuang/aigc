@@ -13,6 +13,7 @@ describe('AssetService', () => {
       findMany: jest.fn(),
       findFirst: jest.fn(),
       update: jest.fn(),
+      delete: jest.fn(),
     },
     generationTask: {
       findFirst: jest.fn(),
@@ -20,6 +21,7 @@ describe('AssetService', () => {
   };
   const storage = {
     getSignedUrl: jest.fn(),
+    deleteObject: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -112,5 +114,57 @@ describe('AssetService', () => {
       templateId: undefined,
       cameraStrength: undefined,
     });
+  });
+
+  it('lists trashed assets filtered by type', async () => {
+    prisma.asset.findMany.mockResolvedValue([{ id: 'a1', deletedAt: new Date() }]);
+    await service.listTrashForUser('u1', AssetType.image);
+    expect(prisma.asset.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'u1', deletedAt: { not: null }, type: AssetType.image },
+        orderBy: { deletedAt: 'desc' },
+      }),
+    );
+  });
+
+  it('restores trashed asset', async () => {
+    prisma.asset.findFirst.mockResolvedValue({ id: 'a1', deletedAt: new Date() });
+    prisma.asset.update.mockResolvedValue({ id: 'a1', deletedAt: null });
+
+    await service.restoreForUser('u1', 'a1');
+
+    expect(prisma.asset.update).toHaveBeenCalledWith({
+      where: { id: 'a1' },
+      data: { deletedAt: null },
+    });
+  });
+
+  it('throws when restoring active asset', async () => {
+    prisma.asset.findFirst.mockResolvedValue(null);
+    await expect(service.restoreForUser('u1', 'a1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('permanently destroys trashed asset', async () => {
+    prisma.asset.findFirst.mockResolvedValue({
+      id: 'a1',
+      ossKey: 'assets/u1/a1.png',
+      deletedAt: new Date(),
+    });
+    storage.deleteObject.mockResolvedValue(undefined);
+    prisma.asset.delete.mockResolvedValue({ id: 'a1' });
+
+    await service.destroyForUser('u1', 'a1');
+
+    expect(storage.deleteObject).toHaveBeenCalledWith('assets/u1/a1.png');
+    expect(prisma.asset.delete).toHaveBeenCalledWith({ where: { id: 'a1' } });
+  });
+
+  it('throws when destroying active asset', async () => {
+    prisma.asset.findFirst.mockResolvedValue(null);
+    await expect(service.destroyForUser('u1', 'a1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 });

@@ -148,4 +148,31 @@ export class StorageService {
   getReadableStream(_ossKey: string): Readable {
     throw new Error('Stream proxy not implemented in MVP');
   }
+
+  async deleteObject(ossKey: string): Promise<void> {
+    if (this.mockMode) {
+      this.logger.debug(`Mock delete: ${ossKey}`);
+      return;
+    }
+    if (!this.client) {
+      throw new ServiceUnavailableException(
+        '对象存储未配置，请设置 STORAGE_MOCK=true 或填写 OSS 凭证',
+      );
+    }
+    try {
+      await this.client.delete(ossKey);
+    } catch (error) {
+      const code =
+        error && typeof error === 'object' && 'code' in error
+          ? String((error as { code: unknown }).code)
+          : '';
+      if (code === 'NoSuchKey') {
+        return;
+      }
+      const detail = error instanceof Error ? error.message : 'unknown error';
+      this.logger.error(`OSS delete failed: ${detail}`);
+      throw new InternalServerErrorException(`删除对象失败：${detail}`);
+    }
+    this.signedUrlCache.delete(ossKey);
+  }
 }
