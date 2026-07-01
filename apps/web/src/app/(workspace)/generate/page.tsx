@@ -188,7 +188,7 @@ export default function GeneratePage() {
     <div className="space-y-gutter">
       <div className="flex flex-col justify-between gap-md md:flex-row md:items-end">
         <div>
-          <h2 className="text-headline-lg text-on-surface">创作中心</h2>
+          <h2 className="text-headline-lg text-on-surface">创作中心-测试部署</h2>
           <p className="mt-1 text-on-surface-variant">接入即梦引擎，将创意转化为图片与视频素材</p>
         </div>
         <div className="flex items-center gap-sm">
