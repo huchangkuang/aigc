@@ -12,6 +12,7 @@ const context: ComposeContext = {
   aspectRatio: '16:9',
   templateId: 'hitchcock_dolly_in',
   cameraStrength: 'medium',
+  model: '1080',
 };
 
 describe('buildComposerDraft', () => {
@@ -25,6 +26,7 @@ describe('buildComposerDraft', () => {
       aspectRatio: '16:9',
       templateId: 'hitchcock_dolly_in',
       cameraStrength: 'medium',
+      model: '1080',
     });
   });
 

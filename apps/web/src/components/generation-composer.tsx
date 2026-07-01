@@ -1,8 +1,9 @@
 'use client';
 
-import { FormEvent, useRef, type ReactNode } from 'react';
+import { FormEvent, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from '@/components/icon';
 import { MediaPreview } from '@/components/media-preview';
+import { api, type GenerationModelOption } from '@/lib/api-client';
 
 const GENERATION_TYPES = [
   { value: 'image', label: '文生图', icon: 'image' },
@@ -25,6 +26,8 @@ const MAX_REFERENCE_IMAGES = 14;
 type GenerationComposerProps = {
   type: GenerationType;
   onTypeChange: (type: GenerationType) => void;
+  model: string;
+  onModelChange: (model: string) => void;
   prompt: string;
   onPromptChange: (value: string) => void;
   references: ReferencePreview[];
@@ -77,6 +80,8 @@ function PillSelect({
 export function GenerationComposer({
   type,
   onTypeChange,
+  model,
+  onModelChange,
   prompt,
   onPromptChange,
   references,
@@ -95,9 +100,28 @@ export function GenerationComposer({
   onSubmit,
 }: GenerationComposerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [modelOptions, setModelOptions] = useState<GenerationModelOption[]>([]);
   const needsImages = type.includes('i2v') || type === 'image';
   const selectedType = GENERATION_TYPES.find((item) => item.value === type);
   const uploadingCount = references.filter((item) => item.uploading).length;
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .listModels(type, { silent: true })
+      .then((options) => {
+        if (cancelled) return;
+        setModelOptions(options);
+        if (options.length === 0) return;
+        if (!options.some((item) => item.id === model)) {
+          onModelChange(options[0].id);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [type]);
 
   return (
     <form onSubmit={onSubmit} className="glass-panel rounded-xl p-md">
@@ -193,6 +217,20 @@ export function GenerationComposer({
           ))}
         </PillSelect>
 
+        {modelOptions.length > 0 ? (
+          <PillSelect
+            icon="tune"
+            value={model || modelOptions[0].id}
+            onChange={onModelChange}
+          >
+            {modelOptions.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </PillSelect>
+        ) : null}
+
         {type === 'video_t2v' && (
           <PillSelect icon="crop_free" value={aspectRatio} onChange={onAspectRatioChange}>
             {['16:9', '4:3', '1:1', '3:4', '9:16', '21:9'].map((ratio) => (
@@ -240,7 +278,7 @@ export function GenerationComposer({
 
       <button
         type="submit"
-        disabled={loading || uploadingCount > 0}
+        disabled={loading || uploadingCount > 0 || !model}
         className="gradient-button flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-bold text-on-primary disabled:cursor-not-allowed disabled:opacity-60"
       >
         <Icon name="auto_awesome" className={loading ? 'animate-spin' : ''} />

@@ -3,6 +3,7 @@ import {
   collectOutputAssets,
   getLatestOutputAsset,
   hasActiveTasks,
+  resolveSessionSubmitMessage,
 } from '@/lib/generation-output';
 import type { GenerationTask } from '@/lib/api-client';
 
@@ -37,5 +38,13 @@ describe('generation-output', () => {
   it('collects previewable assets from completed tasks', () => {
     expect(collectOutputAssets([doneTask])).toHaveLength(1);
     expect(getLatestOutputAsset([doneTask])?.id).toBe('a1');
+  });
+
+  it('resolves submit message after session tasks finish', () => {
+    expect(resolveSessionSubmitMessage([{ ...doneTask, status: 'processing' }])).toBeNull();
+    expect(resolveSessionSubmitMessage([doneTask])).toBe('生成完成');
+    expect(
+      resolveSessionSubmitMessage([{ ...doneTask, status: 'failed', assets: [] }]),
+    ).toBe('生成失败，请重试');
   });
 });

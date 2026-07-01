@@ -16,6 +16,7 @@ export function buildComposerDraft(
       frames: context.frames,
       templateId: context.templateId,
       cameraStrength: context.cameraStrength,
+      model: context.model,
     };
   }
 

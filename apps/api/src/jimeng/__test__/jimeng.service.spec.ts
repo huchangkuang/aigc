@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { REQ_KEY_MAP } from '../jimeng.types';
+import { resolveReqKey } from '../../generation/generation-capabilities';
 import { JimengService } from '../jimeng.service';
 
 describe('JimengService', () => {
@@ -65,9 +65,9 @@ describe('JimengService', () => {
     });
   });
 
-  it('maps req keys for all generation types', () => {
-    expect(REQ_KEY_MAP.image).toBe('jimeng_seedream46_cvtob');
-    expect(REQ_KEY_MAP.video_t2v).toBe('jimeng_t2v_v30');
-    expect(REQ_KEY_MAP.video_i2v_recamera).toBe('jimeng_i2v_recamera_v30');
+  it('maps req keys for default generation tiers', () => {
+    expect(resolveReqKey('image')).toBe('jimeng_seedream46_cvtob');
+    expect(resolveReqKey('video_t2v')).toBe('jimeng_t2v_v30');
+    expect(resolveReqKey('video_i2v_recamera')).toBe('jimeng_i2v_recamera_v30');
   });
 });

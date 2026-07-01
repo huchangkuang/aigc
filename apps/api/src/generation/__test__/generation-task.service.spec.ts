@@ -42,7 +42,17 @@ describe('GenerationTaskService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('creates task and submits to jimeng', async () => {
+  it('rejects invalid model for type', async () => {
+    await expect(
+      service.create('u1', {
+        type: 'video_t2v',
+        model: 'not-a-tier',
+        prompt: 'hello',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('creates task and submits to jimeng with default model', async () => {
     prisma.generationTask.create.mockResolvedValue({
       id: 't1',
       userId: 'u1',
@@ -64,5 +74,54 @@ describe('GenerationTaskService', () => {
     ).resolves.toMatchObject({
       jimengTaskId: 'jimeng-1',
     });
+
+    expect(prisma.generationTask.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          reqKey: 'jimeng_t2v_v30',
+          inputParams: expect.objectContaining({ model: '720' }),
+        }),
+      }),
+    );
+    expect(jimeng.submitTask).toHaveBeenCalledWith(
+      'jimeng_t2v_v30',
+      expect.objectContaining({ prompt: 'hello' }),
+    );
+    expect(jimeng.submitTask).toHaveBeenCalledWith(
+      'jimeng_t2v_v30',
+      expect.not.objectContaining({ model: expect.anything() }),
+    );
+  });
+
+  it('creates 1080P and pro tasks with correct reqKey', async () => {
+    prisma.generationTask.create.mockResolvedValue({ id: 't1' });
+    jimeng.submitTask.mockResolvedValue({
+      code: 10000,
+      data: { task_id: 'jimeng-1' },
+    });
+    prisma.generationTask.update.mockResolvedValue({
+      id: 't1',
+      status: GenerationStatus.processing,
+    });
+
+    await service.create('u1', {
+      type: 'video_t2v',
+      model: '1080',
+      prompt: 'hello',
+    });
+    expect(jimeng.submitTask).toHaveBeenLastCalledWith(
+      'jimeng_t2v_v30_1080p',
+      expect.any(Object),
+    );
+
+    await service.create('u1', {
+      type: 'video_t2v',
+      model: 'pro',
+      prompt: 'hello',
+    });
+    expect(jimeng.submitTask).toHaveBeenLastCalledWith(
+      'jimeng_ti2v_v30_pro',
+      expect.any(Object),
+    );
   });
 });

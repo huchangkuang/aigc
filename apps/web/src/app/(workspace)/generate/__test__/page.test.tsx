@@ -8,6 +8,7 @@ vi.mock('@/lib/api-client', () => ({
   api: {
     listTasks: vi.fn().mockResolvedValue([]),
     listActiveTasks: vi.fn().mockResolvedValue([]),
+    listModels: vi.fn().mockResolvedValue([{ id: 'seedream46', label: 'Seedream 4.6' }]),
     createTask: vi.fn(),
     uploadReference: vi.fn(),
   },

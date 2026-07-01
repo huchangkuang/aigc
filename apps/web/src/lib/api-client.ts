@@ -57,6 +57,11 @@ export type Asset = {
   deletedAt?: string;
 };
 
+export type GenerationModelOption = {
+  id: string;
+  label: string;
+};
+
 export type ComposeContext = {
   assetId: string;
   assetType: 'image' | 'video';
@@ -67,6 +72,7 @@ export type ComposeContext = {
   aspectRatio?: string;
   templateId?: string;
   cameraStrength?: string;
+  model?: string;
 };
 
 function getToken() {
@@ -137,6 +143,13 @@ export const api = {
   },
   listActiveTasks(options?: ApiOptions) {
     return apiFetch<ActiveGenerationTask[]>('/generation-tasks/active', {}, options);
+  },
+  listModels(type: string, options?: ApiOptions) {
+    return apiFetch<GenerationModelOption[]>(
+      `/generation/models?type=${encodeURIComponent(type)}`,
+      {},
+      options,
+    );
   },
   createTask(body: Record<string, unknown>) {
     return apiFetch<GenerationTask>('/generation-tasks', {

@@ -1,11 +1,4 @@
-### Requirement: Backend proxies Jimeng API with server-side credentials
-
-The system MUST call Volcengine Visual API using AccessKey/SecretKey stored only in server environment variables. Client applications MUST NOT receive or transmit Jimeng credentials.
-
-#### Scenario: Submit task uses server credentials
-
-- **WHEN** an authenticated user submits a generation request
-- **THEN** the API signs the request with configured Volcengine credentials and returns a local task id
+## MODIFIED Requirements
 
 ### Requirement: Five generation types are supported
 
@@ -70,6 +63,8 @@ When `model` is omitted, the system MUST use the default row for that type (same
 - **WHEN** user submits a `model` value not defined for the given `type`
 - **THEN** the system responds with HTTP 400 validation error
 
+## ADDED Requirements
+
 ### Requirement: Available models are exposed per generation type
 
 The system SHALL expose `GET /generation/models?type=<GenerationType>` for authenticated users, returning the list of enabled model tiers for that capability. Each item SHALL include `id` and `label` only; `req_key` MUST NOT be returned to clients.
@@ -102,55 +97,3 @@ The system SHALL store the submitted `model` value in `GenerationTask.inputParam
 
 - **WHEN** user retrieves a task created with `model: 1080`
 - **THEN** `inputParams` includes `model: 1080` and `reqKey` reflects the 1080P mapping for that type
-
-### Requirement: Generation tasks are polled until completion
-
-The system SHALL poll Jimeng `CVSync2AsyncGetResult` for tasks in `pending` or `processing` status until status is `done`, failed, expired, or not_found.
-
-#### Scenario: Task transitions to processing
-
-- **WHEN** Jimeng returns status `generating` for a task
-- **THEN** the local GenerationTask status is updated to `processing`
-
-#### Scenario: Task completes successfully
-
-- **WHEN** Jimeng returns status `done` with code 10000 and output URLs
-- **THEN** the system triggers OSS persistence and marks task `done`
-
-#### Scenario: Task fails with Jimeng error
-
-- **WHEN** Jimeng returns a non-10000 code or failed status
-- **THEN** the GenerationTask is marked `failed` with error message stored
-
-### Requirement: Active generation tasks can be queried without asset URLs
-
-The system SHALL expose `GET /generation-tasks/active` for authenticated users, returning only tasks in `pending` or `processing` status with fields sufficient for progress display (`id`, `status`, `errorMessage`, `type`, `createdAt`), without asset data or signed OSS URLs.
-
-#### Scenario: List active tasks
-
-- **WHEN** user requests `GET /generation-tasks/active` and has tasks in `pending` or `processing`
-- **THEN** the response includes only those tasks with status fields and no `previewUrl` or asset signing
-
-#### Scenario: No active tasks
-
-- **WHEN** user requests `GET /generation-tasks/active` and all tasks are `done` or `failed`
-- **THEN** the response is an empty array
-
-#### Scenario: Active endpoint excludes other users tasks
-
-- **WHEN** user requests `GET /generation-tasks/active`
-- **THEN** the response includes only tasks owned by that user
-
-### Requirement: User can query own generation tasks
-
-The system SHALL allow authenticated users to list and retrieve their generation tasks with current status. The full list endpoint `GET /generation-tasks` SHALL include signed preview URLs for assets and is intended for initial load and post-completion refresh, not for high-frequency status polling.
-
-#### Scenario: List recent tasks
-
-- **WHEN** user requests `GET /generation-tasks`
-- **THEN** the response includes only tasks owned by that user ordered by createdAt desc
-
-#### Scenario: Get single task detail
-
-- **WHEN** user requests `GET /generation-tasks/:id` for their task
-- **THEN** the response includes status, type, inputParams, errorMessage, and linked asset ids when done

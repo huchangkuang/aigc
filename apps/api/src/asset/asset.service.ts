@@ -15,6 +15,7 @@ type CreateAssetInput = {
 
 type InputParams = {
   prompt?: unknown;
+  model?: unknown;
   image_urls?: unknown;
   frames?: unknown;
   aspect_ratio?: unknown;
@@ -181,6 +182,7 @@ export class AssetService {
         typeof inputParams.camera_strength === 'string'
           ? inputParams.camera_strength
           : undefined,
+      model: typeof inputParams.model === 'string' ? inputParams.model : undefined,
     };
   }
 

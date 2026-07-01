@@ -11,6 +11,7 @@ export type ComposerDraft = {
   frames?: number;
   templateId?: string;
   cameraStrength?: string;
+  model?: string;
 };
 
 type ComposerDraftStore = {

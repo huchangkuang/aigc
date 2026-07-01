@@ -37,6 +37,33 @@ describe('trash asset api paths', () => {
   });
 });
 
+describe('generation models api', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('calls list models endpoint', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        json: async () => ({
+          code: 0,
+          message: 'success',
+          data: [{ id: '720', label: '720P' }],
+        }),
+      }),
+    );
+
+    await expect(api.listModels('video_t2v')).resolves.toEqual([
+      { id: '720', label: '720P' },
+    ]);
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/generation/models?type=video_t2v'),
+      expect.any(Object),
+    );
+  });
+});
+
 describe('apiFetch error toast', () => {
   afterEach(() => {
     vi.restoreAllMocks();

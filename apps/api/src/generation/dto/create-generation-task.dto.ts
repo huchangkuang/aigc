@@ -19,6 +19,10 @@ export class CreateGenerationTaskDto {
   ])
   type!: GenerationType;
 
+  @IsOptional()
+  @IsString()
+  model?: string;
+
   @IsString()
   @MaxLength(800)
   prompt!: string;

@@ -9,7 +9,7 @@ import {
 import { GenerationPreviewPanel } from '@/components/generation-preview-panel';
 import { TaskQueueDock } from '@/components/task-queue-dock';
 import { api, type GenerationTask } from '@/lib/api-client';
-import { hasActiveTasks } from '@/lib/generation-output';
+import { hasActiveTasks, resolveSessionSubmitMessage, GENERATION_SUBMIT_MESSAGE } from '@/lib/generation-output';
 import { mergeTasksWithStableUrls } from '@/lib/merge-tasks-stable-urls';
 import { consumeComposerDraft } from '@/stores/composer-draft-store';
 import { toast } from '@/stores/toast-store';
@@ -31,6 +31,7 @@ function parseImageUrls(raw: string) {
 
 export default function GeneratePage() {
   const [type, setType] = useState<GenerationType>('image');
+  const [model, setModel] = useState('');
   const [prompt, setPrompt] = useState('');
   const [imageUrls, setImageUrls] = useState('');
   const [pendingRefs, setPendingRefs] = useState<PendingReference[]>([]);
@@ -150,6 +151,7 @@ export default function GeneratePage() {
 
     if (draft.mode === 'similar') {
       if (draft.type) setType(draft.type);
+      if (draft.model) setModel(draft.model);
       if (draft.frames !== undefined) setFrames(draft.frames);
       if (draft.aspectRatio) setAspectRatio(draft.aspectRatio);
       if (draft.templateId) setTemplateId(draft.templateId);
@@ -194,6 +196,16 @@ export default function GeneratePage() {
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, [pollingTasks]);
+
+  useEffect(() => {
+    if (pollingTasks || message !== GENERATION_SUBMIT_MESSAGE) return;
+
+    const sessionTasks = tasks.filter((task) =>
+      sessionTaskIdsRef.current.includes(task.id),
+    );
+    const next = resolveSessionSubmitMessage(sessionTasks);
+    if (next !== null) setMessage(next);
+  }, [pollingTasks, tasks, message]);
 
   function removeReference(id: string) {
     if (id.startsWith('confirmed-')) {
@@ -246,6 +258,7 @@ export default function GeneratePage() {
     setMessage('');
     try {
       const body: Record<string, unknown> = { type, prompt };
+      if (model) body.model = model;
 
       if (type !== 'image') {
         body.frames = frames;
@@ -265,8 +278,8 @@ export default function GeneratePage() {
       const created = await api.createTask(body);
       const nextIds = [created.id, ...sessionTaskIdsRef.current];
       updateSessionTaskIds(nextIds);
-      setMessage('任务已提交，正在生成…');
-      toast('任务已提交，正在生成…', 'success');
+      setMessage(GENERATION_SUBMIT_MESSAGE);
+      toast(GENERATION_SUBMIT_MESSAGE, 'success');
       await refreshSession(nextIds);
     } finally {
       setLoading(false);
@@ -296,6 +309,8 @@ export default function GeneratePage() {
           <GenerationComposer
             type={type}
             onTypeChange={setType}
+            model={model}
+            onModelChange={setModel}
             prompt={prompt}
             onPromptChange={setPrompt}
             references={references}

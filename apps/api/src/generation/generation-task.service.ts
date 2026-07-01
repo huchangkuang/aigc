@@ -6,8 +6,11 @@ import {
 import { GenerationStatus, GenerationType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { JimengService } from '../jimeng/jimeng.service';
-import { REQ_KEY_MAP } from '../jimeng/jimeng.types';
 import { CreateGenerationTaskDto } from './dto/create-generation-task.dto';
+import {
+  resolveModelId,
+  resolveReqKey,
+} from './generation-capabilities';
 
 @Injectable()
 export class GenerationTaskService {
@@ -19,8 +22,18 @@ export class GenerationTaskService {
   async create(userId: string, dto: CreateGenerationTaskDto) {
     this.validateDto(dto);
 
-    const reqKey = REQ_KEY_MAP[dto.type];
-    const inputParams = this.buildInputParams(dto);
+    let reqKey: string;
+    let modelId: string;
+    try {
+      modelId = resolveModelId(dto.type, dto.model);
+      reqKey = resolveReqKey(dto.type, dto.model);
+    } catch {
+      throw new BadRequestException('Invalid model for generation type');
+    }
+
+    const inputParams = this.buildInputParams(dto, modelId);
+    const jimengPayload = { ...inputParams };
+    delete jimengPayload.model;
 
     const task = await this.prisma.generationTask.create({
       data: {
@@ -33,7 +46,7 @@ export class GenerationTaskService {
     });
 
     try {
-      const response = await this.jimeng.submitTask(reqKey, inputParams);
+      const response = await this.jimeng.submitTask(reqKey, jimengPayload);
       if (response.code !== 10000 || !response.data?.task_id) {
         throw new Error(response.message ?? 'Jimeng submit failed');
       }
@@ -170,9 +183,13 @@ export class GenerationTaskService {
     }
   }
 
-  private buildInputParams(dto: CreateGenerationTaskDto): Prisma.JsonObject {
+  private buildInputParams(
+    dto: CreateGenerationTaskDto,
+    modelId: string,
+  ): Prisma.JsonObject {
     const params: Prisma.JsonObject = {
       prompt: dto.prompt,
+      model: modelId,
     };
 
     if (dto.image_urls) params.image_urls = dto.image_urls;
