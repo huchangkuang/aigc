@@ -84,7 +84,7 @@ export default function EditPage() {
       {!segments.length ? (
         <p className="text-on-surface-variant">点击「解析分镜」生成分镜片段</p>
       ) : (
-        <div className="space-y-md">
+        <div className="space-y-lg">
           {segments.map((segment, index) => (
             <SegmentCard
               key={segment.id}

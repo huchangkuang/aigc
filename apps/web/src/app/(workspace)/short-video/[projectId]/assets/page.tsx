@@ -53,7 +53,7 @@ export default function ProjectAssetsPage() {
       {!entities.length ? (
         <p className="text-on-surface-variant">请先在剧本页解析实体</p>
       ) : (
-        <div className="space-y-md">
+        <div className="space-y-lg">
           {entities.map((entity) => (
             <EntityCard
               key={entity.id}

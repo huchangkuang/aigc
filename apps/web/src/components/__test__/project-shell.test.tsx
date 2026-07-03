@@ -4,6 +4,12 @@ import { ProjectShell } from '../project-shell';
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/short-video/p1/script',
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
+vi.mock('@/stores/auth-store', () => ({
+  useAuthStore: (selector: (s: { user: null; logout: () => void }) => unknown) =>
+    selector({ user: null, logout: vi.fn() }),
 }));
 
 describe('ProjectShell', () => {
@@ -17,6 +23,7 @@ describe('ProjectShell', () => {
     expect(screen.getByText('资产')).toBeInTheDocument();
     expect(screen.getByText('视频编辑')).toBeInTheDocument();
     expect(screen.getByText('项目设置')).toBeInTheDocument();
+    expect(screen.getByText('返回项目列表')).toBeInTheDocument();
     expect(screen.getByText('content')).toBeInTheDocument();
   });
 });

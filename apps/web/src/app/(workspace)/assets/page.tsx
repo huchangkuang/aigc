@@ -63,7 +63,7 @@ export default function AssetsPage() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-sm sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-md sm:flex-row sm:items-end">
           <div className="group relative w-full sm:w-56">
             <Icon
               name="search"
@@ -78,44 +78,60 @@ export default function AssetsPage() {
             />
           </div>
 
-          <div className="flex flex-col gap-xs">
-            <div className="flex items-center gap-xs rounded-lg border border-primary/10 bg-surface-container-high p-1">
-              {sourceFilters.map((filter) => {
-                const active = source === filter.value;
-                return (
-                  <button
-                    key={filter.value}
-                    type="button"
-                    onClick={() => setSource(filter.value)}
-                    className={`rounded-md px-md py-1.5 text-sm font-medium transition-all ${
-                      active
-                        ? 'bg-primary text-on-primary shadow-lg'
-                        : 'text-on-surface-variant hover:bg-primary/10 hover:text-primary'
-                    }`}
-                  >
-                    {filter.label}
-                  </button>
-                );
-              })}
+          <div className="flex flex-wrap items-center gap-md rounded-xl border border-outline-variant/30 bg-surface-container-low/50 px-md py-sm">
+            <div className="flex items-center gap-sm">
+              <span className="text-label-sm shrink-0 font-medium text-on-surface-variant">
+                来源
+              </span>
+              <div className="flex items-center gap-0.5 rounded-lg bg-surface-container-high p-0.5">
+                {sourceFilters.map((filter) => {
+                  const active = source === filter.value;
+                  return (
+                    <button
+                      key={filter.value}
+                      type="button"
+                      onClick={() => setSource(filter.value)}
+                      className={`cursor-pointer rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                        active
+                          ? 'bg-primary text-on-primary shadow-sm'
+                          : 'text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      {filter.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex items-center gap-xs rounded-lg border border-primary/10 bg-surface-container-high p-1">
-              {formatFilters.map((filter) => {
-                const active = type === filter.value;
-                return (
-                  <button
-                    key={filter.value}
-                    type="button"
-                    onClick={() => setType(filter.value)}
-                    className={`rounded-md px-md py-1.5 text-sm font-medium transition-all ${
-                      active
-                        ? 'bg-primary text-on-primary shadow-lg'
-                        : 'text-on-surface-variant hover:bg-primary/10 hover:text-primary'
-                    }`}
-                  >
-                    {filter.label}
-                  </button>
-                );
-              })}
+
+            <div
+              className="hidden h-6 w-px bg-outline-variant/40 sm:block"
+              aria-hidden
+            />
+
+            <div className="flex items-center gap-sm">
+              <span className="text-label-sm shrink-0 font-medium text-on-surface-variant">
+                格式
+              </span>
+              <div className="flex items-center gap-1">
+                {formatFilters.map((filter) => {
+                  const active = type === filter.value;
+                  return (
+                    <button
+                      key={filter.value}
+                      type="button"
+                      onClick={() => setType(filter.value)}
+                      className={`cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium transition-all ${
+                        active
+                          ? 'border-primary/40 bg-primary/10 text-primary'
+                          : 'border-transparent text-on-surface-variant hover:border-outline-variant/50 hover:text-on-surface'
+                      }`}
+                    >
+                      {filter.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
