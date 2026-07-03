@@ -7,16 +7,24 @@ import { Icon } from '@/components/icon';
 import { getAssetDisplayTitle } from '@/lib/asset-display';
 import { api, type Asset } from '@/lib/api-client';
 
-const filters = [
+const sourceFilters = [
+  { value: 'all', label: '全部' },
+  { value: 'material', label: '素材' },
+  { value: 'short_video', label: '短视频' },
+] as const;
+
+const formatFilters = [
   { value: 'all', label: '全部' },
   { value: 'image', label: '图片' },
   { value: 'video', label: '视频' },
 ] as const;
 
-type FilterType = (typeof filters)[number]['value'];
+type SourceFilter = (typeof sourceFilters)[number]['value'];
+type FormatFilter = (typeof formatFilters)[number]['value'];
 
 export default function AssetsPage() {
-  const [type, setType] = useState<FilterType>('all');
+  const [source, setSource] = useState<SourceFilter>('all');
+  const [type, setType] = useState<FormatFilter>('all');
   const [query, setQuery] = useState('');
   const [assets, setAssets] = useState<Asset[]>([]);
 
@@ -33,12 +41,17 @@ export default function AssetsPage() {
     : assets;
 
   function loadAssets() {
-    api.listAssets(type === 'all' ? undefined : type).then(setAssets);
+    api
+      .listAssets(
+        type === 'all' ? undefined : type,
+        source === 'all' ? undefined : source,
+      )
+      .then(setAssets);
   }
 
   useEffect(() => {
     loadAssets();
-  }, [type]);
+  }, [type, source]);
 
   return (
     <div className="space-y-gutter">
@@ -65,24 +78,45 @@ export default function AssetsPage() {
             />
           </div>
 
-          <div className="flex items-center gap-xs rounded-lg border border-primary/10 bg-surface-container-high p-1">
-            {filters.map((filter) => {
-            const active = type === filter.value;
-            return (
-              <button
-                key={filter.value}
-                type="button"
-                onClick={() => setType(filter.value)}
-                className={`rounded-md px-md py-1.5 text-sm font-medium transition-all ${
-                  active
-                    ? 'bg-primary text-on-primary shadow-lg'
-                    : 'text-on-surface-variant hover:bg-primary/10 hover:text-primary'
-                }`}
-              >
-                {filter.label}
-              </button>
-            );
-          })}
+          <div className="flex flex-col gap-xs">
+            <div className="flex items-center gap-xs rounded-lg border border-primary/10 bg-surface-container-high p-1">
+              {sourceFilters.map((filter) => {
+                const active = source === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setSource(filter.value)}
+                    className={`rounded-md px-md py-1.5 text-sm font-medium transition-all ${
+                      active
+                        ? 'bg-primary text-on-primary shadow-lg'
+                        : 'text-on-surface-variant hover:bg-primary/10 hover:text-primary'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-xs rounded-lg border border-primary/10 bg-surface-container-high p-1">
+              {formatFilters.map((filter) => {
+                const active = type === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    onClick={() => setType(filter.value)}
+                    className={`rounded-md px-md py-1.5 text-sm font-medium transition-all ${
+                      active
+                        ? 'bg-primary text-on-primary shadow-lg'
+                        : 'text-on-surface-variant hover:bg-primary/10 hover:text-primary'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>

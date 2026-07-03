@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { AssetType, Prisma } from '@prisma/client';
+import { AssetSource, AssetType, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 
@@ -8,6 +8,7 @@ type CreateAssetInput = {
   userId: string;
   taskId?: string;
   type: AssetType;
+  source?: AssetSource;
   ossKey: string;
   mimeType: string;
   metadata: Prisma.InputJsonValue;
@@ -37,6 +38,7 @@ export class AssetService {
         userId: input.userId,
         taskId: input.taskId,
         type: input.type,
+        source: input.source ?? AssetSource.material,
         ossKey: input.ossKey,
         mimeType: input.mimeType,
         metadata: input.metadata,
@@ -44,12 +46,13 @@ export class AssetService {
     });
   }
 
-  listForUser(userId: string, type?: AssetType) {
+  listForUser(userId: string, type?: AssetType, source?: AssetSource) {
     return this.prisma.asset.findMany({
       where: {
         userId,
         deletedAt: null,
         ...(type ? { type } : {}),
+        ...(source ? { source } : {}),
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -105,12 +108,13 @@ export class AssetService {
     });
   }
 
-  listTrashForUser(userId: string, type?: AssetType) {
+  listTrashForUser(userId: string, type?: AssetType, source?: AssetSource) {
     return this.prisma.asset.findMany({
       where: {
         userId,
         deletedAt: { not: null },
         ...(type ? { type } : {}),
+        ...(source ? { source } : {}),
       },
       orderBy: { deletedAt: 'desc' },
     });

@@ -20,6 +20,7 @@ describe('AppShell', () => {
       </AppShell>,
     );
     expect(screen.getByText('素材生成')).toBeInTheDocument();
+    expect(screen.getByText('短视频')).toBeInTheDocument();
     expect(screen.getByText('任务中心')).toBeInTheDocument();
     expect(screen.getByText('资产库')).toBeInTheDocument();
     expect(screen.getByText('回收站')).toBeInTheDocument();

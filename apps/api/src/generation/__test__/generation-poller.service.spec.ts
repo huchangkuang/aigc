@@ -4,6 +4,7 @@ import { AssetType } from '@prisma/client';
 import { ArkVideoService } from '../../ark/ark-video.service';
 import { AssetService } from '../../asset/asset.service';
 import { JimengService } from '../../jimeng/jimeng.service';
+import { ShortVideoTaskLinkerService } from '../../short-video/short-video-task-linker.service';
 import { StorageService } from '../../storage/storage.service';
 import { GenerationTaskService } from '../generation-task.service';
 import { GenerationPollerService } from '../generation-poller.service';
@@ -45,6 +46,11 @@ describe('GenerationPollerService', () => {
     const assets = {
       createFromPersisted: jest.fn().mockResolvedValue({ id: 'a1' }),
     };
+    const shortVideoLinker = {
+      assetSourceForTask: jest.fn().mockReturnValue('material'),
+      buildAssetMetadata: jest.fn().mockReturnValue({ prompt: 'cat' }),
+      onTaskCompleted: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -54,6 +60,7 @@ describe('GenerationPollerService', () => {
         { provide: ArkVideoService, useValue: ark },
         { provide: StorageService, useValue: storage },
         { provide: AssetService, useValue: assets },
+        { provide: ShortVideoTaskLinkerService, useValue: shortVideoLinker },
         {
           provide: ConfigService,
           useValue: { get: jest.fn() },
@@ -111,6 +118,11 @@ describe('GenerationPollerService', () => {
     const assets = {
       createFromPersisted: jest.fn().mockResolvedValue({ id: 'a1' }),
     };
+    const shortVideoLinker = {
+      assetSourceForTask: jest.fn().mockReturnValue('material'),
+      buildAssetMetadata: jest.fn().mockReturnValue({ prompt: 'cat' }),
+      onTaskCompleted: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -120,6 +132,7 @@ describe('GenerationPollerService', () => {
         { provide: ArkVideoService, useValue: ark },
         { provide: StorageService, useValue: storage },
         { provide: AssetService, useValue: assets },
+        { provide: ShortVideoTaskLinkerService, useValue: shortVideoLinker },
         {
           provide: ConfigService,
           useValue: { get: jest.fn() },

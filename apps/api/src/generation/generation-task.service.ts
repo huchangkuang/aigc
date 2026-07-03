@@ -271,6 +271,13 @@ export class GenerationTaskService {
       params.generate_audio = dto.generate_audio;
     }
     if (dto.watermark !== undefined) params.watermark = dto.watermark;
+    if (dto.shortVideoProjectId) {
+      params.shortVideoProjectId = dto.shortVideoProjectId;
+    }
+    if (dto.shortVideoEntityId) params.shortVideoEntityId = dto.shortVideoEntityId;
+    if (dto.shortVideoSegmentId) {
+      params.shortVideoSegmentId = dto.shortVideoSegmentId;
+    }
 
     return params;
   }

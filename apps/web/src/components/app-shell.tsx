@@ -9,6 +9,7 @@ const SIDEBAR_WIDTH = 'w-56';
 
 const navLinks = [
   { href: '/generate', label: '素材生成', icon: 'auto_awesome' },
+  { href: '/short-video', label: '短视频', icon: 'movie' },
   { href: '/tasks', label: '任务中心', icon: 'playlist_play' },
   { href: '/assets', label: '资产库', icon: 'collections' },
   { href: '/trash', label: '回收站', icon: 'delete' },

@@ -28,6 +28,11 @@ enum AssetType {
   video
 }
 
+enum AssetSource {
+  material
+  short_video
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -36,10 +41,27 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  generationTasks GenerationTask[]
-  assets          Asset[]
+  generationTasks   GenerationTask[]
+  assets            Asset[]
+  shortVideoProjects ShortVideoProject[]
 
   @@map("users")
+}
+
+model ShortVideoProject {
+  id             String   @id @default(cuid())
+  userId         String
+  title          String
+  rawScript      String   @db.Text
+  parsedEntities Json?
+  segments       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt])
+  @@map("short_video_projects")
 }
 
 model GenerationTask {
@@ -64,14 +86,15 @@ model GenerationTask {
 }
 
 model Asset {
-  id        String    @id @default(cuid())
+  id        String      @id @default(cuid())
   userId    String
   taskId    String?
   type      AssetType
+  source    AssetSource @default(material)
   ossKey    String
   mimeType  String
   metadata  Json
-  createdAt DateTime  @default(now())
+  createdAt DateTime    @default(now())
   deletedAt DateTime?
 
   user User            @relation(fields: [userId], references: [id], onDelete: Cascade)

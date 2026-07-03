@@ -1,6 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { AssetType } from '@prisma/client';
+import { AssetSource, AssetType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../../storage/storage.service';
 import { AssetService } from '../asset.service';
@@ -43,6 +43,21 @@ describe('AssetService', () => {
     expect(prisma.asset.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { userId: 'u1', deletedAt: null, type: AssetType.video },
+      }),
+    );
+  });
+
+  it('lists assets filtered by source and type', async () => {
+    prisma.asset.findMany.mockResolvedValue([]);
+    await service.listForUser('u1', AssetType.image, AssetSource.short_video);
+    expect(prisma.asset.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId: 'u1',
+          deletedAt: null,
+          type: AssetType.image,
+          source: AssetSource.short_video,
+        },
       }),
     );
   });

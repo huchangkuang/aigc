@@ -9,7 +9,7 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
-import { AssetType } from '@prisma/client';
+import { AssetSource, AssetType } from '@prisma/client';
 import type { Request } from 'express';
 import { AssetService } from './asset.service';
 import { RenameAssetDto } from './dto/rename-asset.dto';
@@ -28,8 +28,9 @@ export class AssetController {
   async list(
     @Req() req: AuthRequest,
     @Query('type') type?: AssetType,
+    @Query('source') source?: AssetSource,
   ) {
-    const items = await this.assets.listForUser(req.user.id, type);
+    const items = await this.assets.listForUser(req.user.id, type, source);
     return Promise.all(
       items.map(async (asset) => ({
         ...asset,
@@ -42,8 +43,9 @@ export class AssetController {
   async listTrash(
     @Req() req: AuthRequest,
     @Query('type') type?: AssetType,
+    @Query('source') source?: AssetSource,
   ) {
-    const items = await this.assets.listTrashForUser(req.user.id, type);
+    const items = await this.assets.listTrashForUser(req.user.id, type, source);
     return Promise.all(
       items.map(async (asset) => ({
         ...asset,

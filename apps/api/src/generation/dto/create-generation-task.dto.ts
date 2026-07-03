@@ -83,4 +83,16 @@ export class CreateGenerationTaskDto {
   @IsOptional()
   @IsInt()
   height?: number;
+
+  @IsOptional()
+  @IsString()
+  shortVideoProjectId?: string;
+
+  @IsOptional()
+  @IsString()
+  shortVideoEntityId?: string;
+
+  @IsOptional()
+  @IsString()
+  shortVideoSegmentId?: string;
 }

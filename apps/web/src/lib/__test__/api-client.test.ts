@@ -64,6 +64,33 @@ describe('generation models api', () => {
   });
 });
 
+describe('short video api', () => {
+  it('documents short video endpoints', () => {
+    expect(api.listShortVideoProjects).toBeDefined();
+    expect(api.parseShortVideoEntities).toBeDefined();
+    expect(api.generateSegmentVideo).toBeDefined();
+  });
+
+  it('listAssets supports source query', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        json: async () => ({ code: 0, message: 'success', data: [] }),
+      }),
+    );
+
+    await api.listAssets('image', 'short_video');
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('type=image'),
+      expect.any(Object),
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('source=short_video'),
+      expect.any(Object),
+    );
+  });
+});
+
 describe('apiFetch error toast', () => {
   afterEach(() => {
     vi.restoreAllMocks();

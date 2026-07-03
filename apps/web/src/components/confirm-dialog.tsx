@@ -79,6 +79,10 @@ export function ConfirmDialog({
 type RenameDialogProps = {
   open: boolean;
   initialTitle: string;
+  heading?: string;
+  ariaLabel?: string;
+  confirmLabel?: string;
+  placeholder?: string;
   onConfirm: (title: string) => void;
   onCancel: () => void;
 };
@@ -86,6 +90,10 @@ type RenameDialogProps = {
 export function RenameDialog({
   open,
   initialTitle,
+  heading = '重命名',
+  ariaLabel,
+  confirmLabel = '保存',
+  placeholder,
   onConfirm,
   onCancel,
 }: RenameDialogProps) {
@@ -113,7 +121,7 @@ export function RenameDialog({
       onClick={onCancel}
       role="dialog"
       aria-modal="true"
-      aria-label="重命名资产"
+      aria-label={ariaLabel ?? heading}
     >
       <form
         className={dialogPanelClass}
@@ -125,12 +133,14 @@ export function RenameDialog({
           onConfirm(input.value.trim());
         }}
       >
-        <h3 className="text-lg font-semibold text-on-surface">重命名</h3>
+        <h3 className="text-lg font-semibold text-on-surface">{heading}</h3>
         <input
           name="title"
           defaultValue={initialTitle}
           maxLength={120}
+          placeholder={placeholder}
           autoFocus
+          required
           className="mt-4 block w-full rounded-lg border border-outline-variant bg-surface-container-high px-4 py-2.5 text-base text-on-surface outline-none focus:border-primary"
         />
         <div className="mt-6 flex justify-end gap-3">
@@ -145,7 +155,7 @@ export function RenameDialog({
             type="submit"
             className="gradient-button cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-on-primary"
           >
-            保存
+            {confirmLabel}
           </button>
         </div>
       </form>

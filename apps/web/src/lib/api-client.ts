@@ -1,4 +1,5 @@
 import { toast } from '@/stores/toast-store';
+import type { ShortVideoProject, ShortVideoProjectSummary } from '@/lib/short-video-types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -49,6 +50,7 @@ export type ActiveGenerationTask = {
 export type Asset = {
   id: string;
   type: 'image' | 'video';
+  source?: 'material' | 'short_video';
   ossKey?: string;
   previewUrl?: string;
   mimeType: string;
@@ -157,9 +159,12 @@ export const api = {
       body: JSON.stringify(body),
     });
   },
-  listAssets(type?: string) {
-    const query = type ? `?type=${type}` : '';
-    return apiFetch<Asset[]>(`/assets${query}`);
+  listAssets(type?: string, source?: string) {
+    const params = new URLSearchParams();
+    if (type) params.set('type', type);
+    if (source) params.set('source', source);
+    const query = params.toString();
+    return apiFetch<Asset[]>(`/assets${query ? `?${query}` : ''}`);
   },
   renameAsset(id: string, title: string) {
     return apiFetch<Asset>(`/assets/${id}`, {
@@ -172,9 +177,12 @@ export const api = {
       method: 'DELETE',
     });
   },
-  listTrashAssets(type?: string) {
-    const query = type ? `?type=${type}` : '';
-    return apiFetch<Asset[]>(`/assets/trash${query}`);
+  listTrashAssets(type?: string, source?: string) {
+    const params = new URLSearchParams();
+    if (type) params.set('type', type);
+    if (source) params.set('source', source);
+    const query = params.toString();
+    return apiFetch<Asset[]>(`/assets/trash${query ? `?${query}` : ''}`);
   },
   restoreAsset(id: string) {
     return apiFetch<Asset>(`/assets/${id}/restore`, {
@@ -196,5 +204,56 @@ export const api = {
       method: 'POST',
       body: form,
     });
+  },
+  listShortVideoProjects() {
+    return apiFetch<ShortVideoProjectSummary[]>('/short-video/projects');
+  },
+  createShortVideoProject(title: string) {
+    return apiFetch<ShortVideoProject>('/short-video/projects', {
+      method: 'POST',
+      body: JSON.stringify({ title }),
+    });
+  },
+  getShortVideoProject(id: string) {
+    return apiFetch<ShortVideoProject>(`/short-video/projects/${id}`);
+  },
+  updateShortVideoProject(id: string, body: { title?: string; rawScript?: string }) {
+    return apiFetch<ShortVideoProject>(`/short-video/projects/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  },
+  deleteShortVideoProject(id: string) {
+    return apiFetch<{ id: string }>(`/short-video/projects/${id}`, {
+      method: 'DELETE',
+    });
+  },
+  parseShortVideoEntities(id: string) {
+    return apiFetch<ShortVideoProject>(`/short-video/projects/${id}/parse-entities`, {
+      method: 'POST',
+    });
+  },
+  parseShortVideoSegments(id: string) {
+    return apiFetch<ShortVideoProject>(`/short-video/projects/${id}/parse-segments`, {
+      method: 'POST',
+    });
+  },
+  generateEntityImage(projectId: string, entityId: string, prompt?: string) {
+    return apiFetch<GenerationTask>(
+      `/short-video/projects/${projectId}/entities/${entityId}/generate-image`,
+      {
+        method: 'POST',
+        body: JSON.stringify(prompt ? { prompt } : {}),
+      },
+    );
+  },
+  generateSegmentVideo(projectId: string, segmentId: string, model?: string) {
+    return apiFetch<GenerationTask>(
+      `/short-video/projects/${projectId}/segments/${segmentId}/generate-video`,
+      {
+        method: 'POST',
+        body: JSON.stringify(model ? { model } : {}),
+      },
+    );
   },
 };

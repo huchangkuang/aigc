@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { GenerationModule } from './generation/generation.module';
 import { JimengModule } from './jimeng/jimeng.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { ShortVideoModule } from './short-video/short-video.module';
 import { StorageModule } from './storage/storage.module';
 
 @Module({
@@ -24,6 +25,7 @@ import { StorageModule } from './storage/storage.module';
     StorageModule,
     AssetModule,
     GenerationModule,
+    ShortVideoModule,
   ],
   controllers: [AppController],
   providers: [AppService],

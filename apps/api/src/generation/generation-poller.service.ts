@@ -1,11 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Interval } from '@nestjs/schedule';
-import { AssetType, GenerationTask, Prisma } from '@prisma/client';
+import { AssetSource, AssetType, GenerationTask, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { ArkVideoService } from '../ark/ark-video.service';
 import { AssetService } from '../asset/asset.service';
 import { JimengService } from '../jimeng/jimeng.service';
+import { ShortVideoTaskLinkerService } from '../short-video/short-video-task-linker.service';
 import { StorageService } from '../storage/storage.service';
 import { isArkVideoReqKey } from './generation-capabilities';
 import { GenerationTaskService } from './generation-task.service';
@@ -22,6 +23,7 @@ export class GenerationPollerService {
     private readonly storage: StorageService,
     private readonly assets: AssetService,
     private readonly config: ConfigService,
+    private readonly shortVideoLinker: ShortVideoTaskLinkerService,
   ) {}
 
   @Interval(5000)
@@ -61,6 +63,7 @@ export class GenerationPollerService {
     if (!jimengTaskId) return;
 
     const assetMetadata = this.buildAssetMetadata(inputParams);
+    const assetSource = this.shortVideoLinker.assetSourceForTask(inputParams);
 
     try {
       if (isArkVideoReqKey(reqKey)) {
@@ -69,6 +72,8 @@ export class GenerationPollerService {
           externalTaskId: jimengTaskId,
           userId,
           assetMetadata,
+          assetSource,
+          inputParams,
         });
         return;
       }
@@ -99,7 +104,7 @@ export class GenerationPollerService {
           await this.tasks.markFailed(taskId, 'Missing video_url');
           return;
         }
-        await this.persistVideo(userId, taskId, videoUrl, assetMetadata);
+        await this.persistVideo(userId, taskId, videoUrl, assetMetadata, assetSource, inputParams);
       } else {
         const urls = result.data?.image_urls ?? [];
         const base64List = result.data?.binary_data_base64 ?? [];
@@ -113,14 +118,15 @@ export class GenerationPollerService {
               url,
               'image/png',
             );
-            await this.assets.createFromPersisted({
-              id: assetId,
+            await this.persistImageAsset({
+              assetId,
               userId,
               taskId,
-              type: AssetType.image,
-              ossKey: persisted.ossKey,
-              mimeType: persisted.mimeType,
-              metadata: { ...assetMetadata, sourceUrl: url },
+              persisted,
+              assetMetadata,
+              assetSource,
+              inputParams,
+              sourceUrl: url,
             });
           }
         } else if (base64List.length) {
@@ -132,14 +138,15 @@ export class GenerationPollerService {
               encoded,
               'image/png',
             );
-            await this.assets.createFromPersisted({
-              id: assetId,
+            await this.persistImageAsset({
+              assetId,
               userId,
               taskId,
-              type: AssetType.image,
-              ossKey: persisted.ossKey,
-              mimeType: persisted.mimeType,
-              metadata: { ...assetMetadata, source: 'binary_data_base64' },
+              persisted,
+              assetMetadata,
+              assetSource,
+              inputParams,
+              source: 'binary_data_base64',
             });
           }
         } else {
@@ -161,8 +168,11 @@ export class GenerationPollerService {
     externalTaskId: string;
     userId: string;
     assetMetadata: Prisma.JsonObject;
+    assetSource: AssetSource;
+    inputParams: Prisma.JsonValue;
   }) {
-    const { taskId, externalTaskId, userId, assetMetadata } = params;
+    const { taskId, externalTaskId, userId, assetMetadata, assetSource, inputParams } =
+      params;
     const result = await this.ark.getTask(externalTaskId);
 
     if (result.status === 'queued' || result.status === 'running') {
@@ -183,7 +193,14 @@ export class GenerationPollerService {
       return;
     }
 
-    await this.persistVideo(userId, taskId, videoUrl, assetMetadata);
+    await this.persistVideo(
+      userId,
+      taskId,
+      videoUrl,
+      assetMetadata,
+      assetSource,
+      inputParams,
+    );
     await this.tasks.markDone(taskId);
   }
 
@@ -192,6 +209,8 @@ export class GenerationPollerService {
     taskId: string,
     videoUrl: string,
     assetMetadata: Prisma.JsonObject,
+    assetSource: import('@prisma/client').AssetSource,
+    inputParams: Prisma.JsonValue,
   ) {
     const assetId = randomUUID();
     const persisted = await this.storage.persistFromUrl(
@@ -205,20 +224,75 @@ export class GenerationPollerService {
       userId,
       taskId,
       type: AssetType.video,
+      source: assetSource,
       ossKey: persisted.ossKey,
       mimeType: persisted.mimeType,
       metadata: { ...assetMetadata, sourceUrl: videoUrl },
     });
+    await this.shortVideoLinker.onTaskCompleted(
+      taskId,
+      inputParams,
+      assetId,
+      AssetType.video,
+    );
+  }
+
+  private async persistImageAsset(params: {
+    assetId: string;
+    userId: string;
+    taskId: string;
+    persisted: { ossKey: string; mimeType: string };
+    assetMetadata: Prisma.JsonObject;
+    assetSource: AssetSource;
+    inputParams: Prisma.JsonValue;
+    sourceUrl?: string;
+    source?: string;
+  }) {
+    const {
+      assetId,
+      userId,
+      taskId,
+      persisted,
+      assetMetadata,
+      assetSource,
+      inputParams,
+      sourceUrl,
+      source,
+    } = params;
+
+    await this.assets.createFromPersisted({
+      id: assetId,
+      userId,
+      taskId,
+      type: AssetType.image,
+      source: assetSource,
+      ossKey: persisted.ossKey,
+      mimeType: persisted.mimeType,
+      metadata: {
+        ...assetMetadata,
+        ...(sourceUrl ? { sourceUrl } : {}),
+        ...(source ? { source } : {}),
+      },
+    });
+    await this.shortVideoLinker.onTaskCompleted(
+      taskId,
+      inputParams,
+      assetId,
+      AssetType.image,
+    );
   }
 
   private buildAssetMetadata(inputParams: Prisma.JsonValue): Prisma.JsonObject {
-    if (!inputParams || typeof inputParams !== 'object' || Array.isArray(inputParams)) {
-      return {};
-    }
-    const prompt = (inputParams as { prompt?: unknown }).prompt;
-    if (typeof prompt !== 'string' || !prompt.trim()) {
-      return {};
-    }
-    return { prompt: prompt.trim() };
+    const base =
+      !inputParams || typeof inputParams !== 'object' || Array.isArray(inputParams)
+        ? {}
+        : (() => {
+            const prompt = (inputParams as { prompt?: unknown }).prompt;
+            return typeof prompt === 'string' && prompt.trim()
+              ? { prompt: prompt.trim() }
+              : {};
+          })();
+
+    return this.shortVideoLinker.buildAssetMetadata(inputParams, base);
   }
 }
