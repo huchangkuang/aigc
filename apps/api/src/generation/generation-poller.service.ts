@@ -3,9 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { Interval } from '@nestjs/schedule';
 import { AssetType, GenerationTask, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { ArkVideoService } from '../ark/ark-video.service';
 import { AssetService } from '../asset/asset.service';
 import { JimengService } from '../jimeng/jimeng.service';
 import { StorageService } from '../storage/storage.service';
+import { isArkVideoReqKey } from './generation-capabilities';
 import { GenerationTaskService } from './generation-task.service';
 
 @Injectable()
@@ -16,6 +18,7 @@ export class GenerationPollerService {
   constructor(
     private readonly tasks: GenerationTaskService,
     private readonly jimeng: JimengService,
+    private readonly ark: ArkVideoService,
     private readonly storage: StorageService,
     private readonly assets: AssetService,
     private readonly config: ConfigService,
@@ -30,7 +33,10 @@ export class GenerationPollerService {
       // Interval decorator is fixed; env kept for documentation/future refactor
     }
 
-    if (this.polling || !this.jimeng.isConfigured()) {
+    if (
+      this.polling ||
+      (!this.jimeng.isConfigured() && !this.ark.isConfigured())
+    ) {
       return;
     }
 
@@ -57,6 +63,16 @@ export class GenerationPollerService {
     const assetMetadata = this.buildAssetMetadata(inputParams);
 
     try {
+      if (isArkVideoReqKey(reqKey)) {
+        await this.pollArkTask({
+          taskId,
+          externalTaskId: jimengTaskId,
+          userId,
+          assetMetadata,
+        });
+        return;
+      }
+
       const isVideo = type.startsWith('video_');
       const result = await this.jimeng.getResult(reqKey, jimengTaskId, {
         returnUrl: !isVideo,
@@ -83,22 +99,7 @@ export class GenerationPollerService {
           await this.tasks.markFailed(taskId, 'Missing video_url');
           return;
         }
-        const assetId = randomUUID();
-        const persisted = await this.storage.persistFromUrl(
-          userId,
-          assetId,
-          videoUrl,
-          'video/mp4',
-        );
-        await this.assets.createFromPersisted({
-          id: assetId,
-          userId,
-          taskId,
-          type: AssetType.video,
-          ossKey: persisted.ossKey,
-          mimeType: persisted.mimeType,
-          metadata: { ...assetMetadata, sourceUrl: videoUrl },
-        });
+        await this.persistVideo(userId, taskId, videoUrl, assetMetadata);
       } else {
         const urls = result.data?.image_urls ?? [];
         const base64List = result.data?.binary_data_base64 ?? [];
@@ -153,6 +154,61 @@ export class GenerationPollerService {
       this.logger.error(`Poll failed for ${taskId}: ${message}`);
       await this.tasks.markFailed(taskId, message);
     }
+  }
+
+  private async pollArkTask(params: {
+    taskId: string;
+    externalTaskId: string;
+    userId: string;
+    assetMetadata: Prisma.JsonObject;
+  }) {
+    const { taskId, externalTaskId, userId, assetMetadata } = params;
+    const result = await this.ark.getTask(externalTaskId);
+
+    if (result.status === 'queued' || result.status === 'running') {
+      await this.tasks.markProcessing(taskId);
+      return;
+    }
+
+    if (result.status !== 'succeeded') {
+      const message =
+        result.error?.message ?? result.status ?? 'Ark task failed';
+      await this.tasks.markFailed(taskId, message);
+      return;
+    }
+
+    const videoUrl = result.content?.video_url;
+    if (!videoUrl) {
+      await this.tasks.markFailed(taskId, 'Missing video_url');
+      return;
+    }
+
+    await this.persistVideo(userId, taskId, videoUrl, assetMetadata);
+    await this.tasks.markDone(taskId);
+  }
+
+  private async persistVideo(
+    userId: string,
+    taskId: string,
+    videoUrl: string,
+    assetMetadata: Prisma.JsonObject,
+  ) {
+    const assetId = randomUUID();
+    const persisted = await this.storage.persistFromUrl(
+      userId,
+      assetId,
+      videoUrl,
+      'video/mp4',
+    );
+    await this.assets.createFromPersisted({
+      id: assetId,
+      userId,
+      taskId,
+      type: AssetType.video,
+      ossKey: persisted.ossKey,
+      mimeType: persisted.mimeType,
+      metadata: { ...assetMetadata, sourceUrl: videoUrl },
+    });
   }
 
   private buildAssetMetadata(inputParams: Prisma.JsonValue): Prisma.JsonObject {

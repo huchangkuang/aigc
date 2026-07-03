@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { GenerationStatus } from '@prisma/client';
+import { ArkVideoService } from '../../ark/ark-video.service';
 import { JimengService } from '../../jimeng/jimeng.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GenerationTaskService } from '../generation-task.service';
@@ -18,14 +19,20 @@ describe('GenerationTaskService', () => {
   const jimeng = {
     submitTask: jest.fn(),
   };
+  const ark = {
+    isConfigured: jest.fn().mockReturnValue(true),
+    createTask: jest.fn(),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    ark.isConfigured.mockReturnValue(true);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         GenerationTaskService,
         { provide: PrismaService, useValue: prisma },
         { provide: JimengService, useValue: jimeng },
+        { provide: ArkVideoService, useValue: ark },
       ],
     }).compile();
 
@@ -91,7 +98,72 @@ describe('GenerationTaskService', () => {
       'jimeng_t2v_v30',
       expect.not.objectContaining({ model: expect.anything() }),
     );
+    expect(ark.createTask).not.toHaveBeenCalled();
   });
+
+  it('creates seedance task and submits to ark', async () => {
+    prisma.generationTask.create.mockResolvedValue({
+      id: 't2',
+      reqKey: 'doubao-seedance-2-0-260128',
+    });
+    ark.createTask.mockResolvedValue({ id: 'cgt-1' });
+    prisma.generationTask.update.mockResolvedValue({
+      id: 't2',
+      status: GenerationStatus.processing,
+      jimengTaskId: 'cgt-1',
+    });
+
+    await service.create('u1', {
+      type: 'video_seedance_r2v',
+      model: '2.0',
+      prompt: '果茶广告',
+      image_urls: ['https://example.com/a.jpg'],
+      video_urls: ['https://example.com/v.mp4'],
+      audio_urls: ['https://example.com/a.mp3'],
+      duration: 11,
+      aspect_ratio: '16:9',
+    });
+
+    expect(ark.createTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'doubao-seedance-2-0-260128',
+        duration: 11,
+        ratio: '16:9',
+        content: expect.arrayContaining([
+          { type: 'text', text: '果茶广告' },
+          expect.objectContaining({ role: 'reference_image' }),
+          expect.objectContaining({ role: 'reference_video' }),
+          expect.objectContaining({ role: 'reference_audio' }),
+        ]),
+      }),
+    );
+    expect(jimeng.submitTask).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['2.0-fast', 'doubao-seedance-2-0-fast-260128'],
+    ['2.0-mini', 'doubao-seedance-2-0-mini-260615'],
+  ] as const)(
+    'creates seedance %s task with correct ark model',
+    async (model, arkModel) => {
+      prisma.generationTask.create.mockResolvedValue({ id: 't3', reqKey: arkModel });
+      ark.createTask.mockResolvedValue({ id: 'cgt-2' });
+      prisma.generationTask.update.mockResolvedValue({
+        id: 't3',
+        status: GenerationStatus.processing,
+      });
+
+      await service.create('u1', {
+        type: 'video_seedance_r2v',
+        model,
+        prompt: '测试',
+      });
+
+      expect(ark.createTask).toHaveBeenCalledWith(
+        expect.objectContaining({ model: arkModel }),
+      );
+    },
+  );
 
   it('creates 1080P and pro tasks with correct reqKey', async () => {
     prisma.generationTask.create.mockResolvedValue({ id: 't1' });

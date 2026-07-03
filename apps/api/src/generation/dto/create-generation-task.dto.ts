@@ -16,6 +16,7 @@ export class CreateGenerationTaskDto {
     'video_i2v_first',
     'video_i2v_first_tail',
     'video_i2v_recamera',
+    'video_seedance_r2v',
   ])
   type!: GenerationType;
 
@@ -31,6 +32,26 @@ export class CreateGenerationTaskDto {
   @IsArray()
   @IsString({ each: true })
   image_urls?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  video_urls?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  audio_urls?: string[];
+
+  @IsOptional()
+  @IsInt()
+  duration?: number;
+
+  @IsOptional()
+  generate_audio?: boolean;
+
+  @IsOptional()
+  watermark?: boolean;
 
   @IsOptional()
   @IsInt()

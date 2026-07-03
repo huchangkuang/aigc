@@ -13,6 +13,7 @@ enum GenerationType {
   video_i2v_first
   video_i2v_first_tail
   video_i2v_recamera
+  video_seedance_r2v
 }
 
 enum GenerationStatus {

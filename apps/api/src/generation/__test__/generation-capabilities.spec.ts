@@ -53,10 +53,28 @@ describe('generation-capabilities', () => {
       'video_i2v_first',
       'video_i2v_first_tail',
       'video_i2v_recamera',
+      'video_seedance_r2v',
     ];
     for (const type of types) {
       expect(listModelsForType(type).length).toBeGreaterThan(0);
       expect(resolveReqKey(type)).toBeTruthy();
     }
+  });
+
+  it('resolves seedance ark models', () => {
+    expect(listModelsForType('video_seedance_r2v')).toEqual([
+      { id: '2.0', label: 'Seedance 2.0' },
+      { id: '2.0-fast', label: 'Seedance 2.0 Fast' },
+      { id: '2.0-mini', label: 'Seedance 2.0 Mini' },
+    ]);
+    expect(resolveReqKey('video_seedance_r2v', '2.0')).toBe(
+      'doubao-seedance-2-0-260128',
+    );
+    expect(resolveReqKey('video_seedance_r2v', '2.0-fast')).toBe(
+      'doubao-seedance-2-0-fast-260128',
+    );
+    expect(resolveReqKey('video_seedance_r2v', '2.0-mini')).toBe(
+      'doubao-seedance-2-0-mini-260615',
+    );
   });
 });

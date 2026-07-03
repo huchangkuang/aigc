@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ArkModule } from '../ark/ark.module';
 import { JimengModule } from '../jimeng/jimeng.module';
 import { StorageModule } from '../storage/storage.module';
 import { AssetModule } from '../asset/asset.module';
@@ -8,7 +9,7 @@ import { GenerationPollerService } from './generation-poller.service';
 import { GenerationTaskService } from './generation-task.service';
 
 @Module({
-  imports: [JimengModule, StorageModule, AssetModule],
+  imports: [JimengModule, ArkModule, StorageModule, AssetModule],
   controllers: [GenerationController, GenerationMetaController],
   providers: [GenerationTaskService, GenerationPollerService],
   exports: [GenerationTaskService],

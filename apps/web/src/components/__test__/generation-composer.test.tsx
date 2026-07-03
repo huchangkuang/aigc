@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { GenerationComposer } from '@/components/generation-composer';
+import { GenerationComposer, type ReferencePreview } from '@/components/generation-composer';
 import { api } from '@/lib/api-client';
 
 vi.mock('@/lib/api-client', () => ({
@@ -26,6 +26,14 @@ const baseProps = {
   onTemplateIdChange: vi.fn(),
   cameraStrength: 'medium',
   onCameraStrengthChange: vi.fn(),
+  videoReferences: [] as ReferencePreview[],
+  onRemoveVideoReference: vi.fn(),
+  onUploadVideoFile: vi.fn(),
+  audioReferences: [] as ReferencePreview[],
+  onRemoveAudioReference: vi.fn(),
+  onUploadAudioFile: vi.fn(),
+  duration: 5,
+  onDurationChange: vi.fn(),
   loading: false,
   message: '',
   onUploadFile: vi.fn(),
@@ -33,6 +41,25 @@ const baseProps = {
 };
 
 describe('GenerationComposer model tier', () => {
+  it('lists all seedance model variants', async () => {
+    vi.mocked(api.listModels).mockResolvedValue([
+      { id: '2.0', label: 'Seedance 2.0' },
+      { id: '2.0-fast', label: 'Seedance 2.0 Fast' },
+      { id: '2.0-mini', label: 'Seedance 2.0 Mini' },
+    ]);
+
+    render(<GenerationComposer {...baseProps} type="video_seedance_r2v" />);
+
+    await waitFor(() => {
+      expect(api.listModels).toHaveBeenCalledWith('video_seedance_r2v', {
+        silent: true,
+      });
+    });
+
+    expect(screen.getByRole('option', { name: 'Seedance 2.0 Fast' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Seedance 2.0 Mini' })).toBeInTheDocument();
+  });
+
   it('loads model options for current type', async () => {
     vi.mocked(api.listModels).mockResolvedValue([
       { id: '720', label: '720P' },

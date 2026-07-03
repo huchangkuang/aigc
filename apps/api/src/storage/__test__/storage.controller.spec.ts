@@ -39,12 +39,46 @@ describe('StorageController', () => {
         {
           buffer: Buffer.from('x'),
           mimetype: 'image/jpeg',
+          size: 100,
         } as Express.Multer.File,
       ),
     ).resolves.toEqual({
       ossKey: 'temp/u1/x.jpg',
       url: 'https://signed',
       mimeType: 'image/jpeg',
+      kind: 'image',
     });
+  });
+
+  it('uploads valid video', async () => {
+    storageService.uploadTemp.mockResolvedValue({
+      ossKey: 'temp/u1/x.mp4',
+      mimeType: 'video/mp4',
+    });
+    storageService.getSignedUrl.mockResolvedValue('https://signed');
+
+    await expect(
+      controller.upload(
+        { user: { id: 'u1', email: 'a@b.com' } } as never,
+        {
+          buffer: Buffer.from('x'),
+          mimetype: 'video/mp4',
+          size: 1024,
+        } as Express.Multer.File,
+      ),
+    ).resolves.toMatchObject({ kind: 'video' });
+  });
+
+  it('rejects unsupported mime type', async () => {
+    await expect(
+      controller.upload(
+        { user: { id: 'u1', email: 'a@b.com' } } as never,
+        {
+          buffer: Buffer.from('x'),
+          mimetype: 'application/pdf',
+          size: 100,
+        } as Express.Multer.File,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

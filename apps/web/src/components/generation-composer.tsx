@@ -11,6 +11,7 @@ const GENERATION_TYPES = [
   { value: 'video_i2v_first', label: '图生视频·首帧', icon: 'photo_camera' },
   { value: 'video_i2v_first_tail', label: '图生视频·首尾帧', icon: 'flip' },
   { value: 'video_i2v_recamera', label: '图生视频·运镜', icon: '360' },
+  { value: 'video_seedance_r2v', label: 'Seedance 多模态', icon: 'movie' },
 ] as const;
 
 export type GenerationType = (typeof GENERATION_TYPES)[number]['value'];
@@ -22,6 +23,107 @@ export type ReferencePreview = {
 };
 
 const MAX_REFERENCE_IMAGES = 14;
+const MAX_REFERENCE_VIDEOS = 3;
+const MAX_REFERENCE_AUDIOS = 3;
+
+type ReferenceUploadStripProps = {
+  label: string;
+  hint: string;
+  accept: string;
+  mediaType: 'image' | 'video' | 'audio';
+  maxCount: number;
+  items: ReferencePreview[];
+  onUpload: (file: File) => void;
+  onRemove: (id: string) => void;
+  uploadLabel: string;
+};
+
+function ReferenceUploadStrip({
+  label,
+  hint,
+  accept,
+  mediaType,
+  maxCount,
+  items,
+  onUpload,
+  onRemove,
+  uploadLabel,
+}: ReferenceUploadStripProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const confirmedCount = items.filter((item) => !item.uploading).length;
+  const uploading = items.some((item) => item.uploading);
+
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-label-sm text-on-surface-variant">{label}</span>
+        <span className="text-[11px] text-on-surface-variant">
+          {confirmedCount} / {maxCount}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-start gap-sm">
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={items.length >= maxCount || uploading}
+          className="flex h-20 w-20 shrink-0 flex-col items-center justify-center rounded-lg border border-dashed border-outline-variant/60 bg-surface-container-low text-on-surface-variant transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-50"
+        >
+          <Icon name="add" className="text-xl" />
+          <span className="mt-1 px-1 text-center text-[10px] leading-tight">{uploadLabel}</span>
+        </button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept={accept}
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onUpload(file);
+            e.target.value = '';
+          }}
+        />
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="group relative h-20 w-20 overflow-hidden rounded-lg border border-outline-variant/40 bg-surface-container-low"
+          >
+            {mediaType === 'audio' ? (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-on-surface-variant">
+                <Icon name="graphic_eq" className="text-2xl text-primary" />
+                <span className="px-1 text-center text-[9px] leading-tight">音频</span>
+              </div>
+            ) : item.uploading ? (
+              <div className="h-full w-full bg-surface-container-high" />
+            ) : (
+              <MediaPreview
+                src={item.src}
+                type={mediaType}
+                variant="thumbnail"
+                className="h-full w-full"
+                mediaClassName="h-full w-full object-cover"
+              />
+            )}
+            {item.uploading ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-surface/70">
+                <Icon name="progress_activity" className="animate-spin text-primary" />
+              </div>
+            ) : null}
+            {!item.uploading ? (
+              <button
+                type="button"
+                onClick={() => onRemove(item.id)}
+                className="absolute right-0.5 top-0.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-surface/90 text-on-surface opacity-0 transition-opacity group-hover:opacity-100"
+              >
+                <Icon name="close" className="text-xs" />
+              </button>
+            ) : null}
+          </div>
+        ))}
+      </div>
+      <p className="mt-xs text-[11px] text-on-surface-variant">{hint}</p>
+    </div>
+  );
+}
 
 type GenerationComposerProps = {
   type: GenerationType;
@@ -40,6 +142,14 @@ type GenerationComposerProps = {
   onTemplateIdChange: (value: string) => void;
   cameraStrength: string;
   onCameraStrengthChange: (value: string) => void;
+  videoReferences: ReferencePreview[];
+  onRemoveVideoReference: (id: string) => void;
+  onUploadVideoFile: (file: File) => void;
+  audioReferences: ReferencePreview[];
+  onRemoveAudioReference: (id: string) => void;
+  onUploadAudioFile: (file: File) => void;
+  duration: number;
+  onDurationChange: (value: number) => void;
   loading: boolean;
   message: string;
   onUploadFile: (file: File) => void;
@@ -94,6 +204,14 @@ export function GenerationComposer({
   onTemplateIdChange,
   cameraStrength,
   onCameraStrengthChange,
+  videoReferences,
+  onRemoveVideoReference,
+  onUploadVideoFile,
+  audioReferences,
+  onRemoveAudioReference,
+  onUploadAudioFile,
+  duration,
+  onDurationChange,
   loading,
   message,
   onUploadFile,
@@ -101,9 +219,13 @@ export function GenerationComposer({
 }: GenerationComposerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [modelOptions, setModelOptions] = useState<GenerationModelOption[]>([]);
-  const needsImages = type.includes('i2v') || type === 'image';
+  const needsImages = type.includes('i2v') || type === 'image' || type === 'video_seedance_r2v';
+  const isSeedance = type === 'video_seedance_r2v';
   const selectedType = GENERATION_TYPES.find((item) => item.value === type);
-  const uploadingCount = references.filter((item) => item.uploading).length;
+  const uploadingCount =
+    references.filter((item) => item.uploading).length +
+    videoReferences.filter((item) => item.uploading).length +
+    audioReferences.filter((item) => item.uploading).length;
 
   useEffect(() => {
     let cancelled = false;
@@ -196,11 +318,40 @@ export function GenerationComposer({
             ))}
           </div>
           <div className="mt-xs flex items-center justify-between">
-            <p className="text-[11px] text-on-surface-variant">支持 JPG、PNG、WEBP，最大 10MB</p>
+            <p className="text-[11px] text-on-surface-variant">
+              {isSeedance ? '参考图可选，上传后自动获得可访问 URL' : '支持 JPG、PNG、WEBP，最大 10MB'}
+            </p>
             <span className="text-[11px] text-on-surface-variant">
               {references.filter((item) => !item.uploading).length} / {MAX_REFERENCE_IMAGES}
             </span>
           </div>
+        </div>
+      ) : null}
+
+      {isSeedance ? (
+        <div className="mb-md grid gap-md md:grid-cols-2">
+          <ReferenceUploadStrip
+            label="参考视频"
+            hint="MP4、MOV，单文件最大 200MB"
+            accept="video/mp4,video/quicktime,.mp4,.mov"
+            mediaType="video"
+            maxCount={MAX_REFERENCE_VIDEOS}
+            items={videoReferences}
+            onUpload={onUploadVideoFile}
+            onRemove={onRemoveVideoReference}
+            uploadLabel="上传视频"
+          />
+          <ReferenceUploadStrip
+            label="参考音频"
+            hint="MP3、WAV，单文件最大 15MB"
+            accept="audio/mpeg,audio/mp3,audio/wav,.mp3,.wav"
+            mediaType="audio"
+            maxCount={MAX_REFERENCE_AUDIOS}
+            items={audioReferences}
+            onUpload={onUploadAudioFile}
+            onRemove={onRemoveAudioReference}
+            uploadLabel="上传音频"
+          />
         </div>
       ) : null}
 
@@ -231,7 +382,7 @@ export function GenerationComposer({
           </PillSelect>
         ) : null}
 
-        {type === 'video_t2v' && (
+        {type === 'video_t2v' || isSeedance ? (
           <PillSelect icon="crop_free" value={aspectRatio} onChange={onAspectRatioChange}>
             {['16:9', '4:3', '1:1', '3:4', '9:16', '21:9'].map((ratio) => (
               <option key={ratio} value={ratio}>
@@ -239,9 +390,23 @@ export function GenerationComposer({
               </option>
             ))}
           </PillSelect>
-        )}
+        ) : null}
 
-        {type.startsWith('video_') && (
+        {isSeedance ? (
+          <PillSelect
+            icon="schedule"
+            value={String(duration)}
+            onChange={(v) => onDurationChange(Number(v))}
+          >
+            {[5, 8, 11, 15].map((seconds) => (
+              <option key={seconds} value={String(seconds)}>
+                {seconds} 秒
+              </option>
+            ))}
+          </PillSelect>
+        ) : null}
+
+        {type.startsWith('video_') && !isSeedance ? (
           <PillSelect
             icon="schedule"
             value={String(frames)}
@@ -250,7 +415,7 @@ export function GenerationComposer({
             <option value="121">5 秒</option>
             <option value="241">10 秒</option>
           </PillSelect>
-        )}
+        ) : null}
 
         {type === 'video_i2v_recamera' && (
           <>

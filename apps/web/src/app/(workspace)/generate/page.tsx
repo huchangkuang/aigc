@@ -15,6 +15,11 @@ import { consumeComposerDraft } from '@/stores/composer-draft-store';
 import { toast } from '@/stores/toast-store';
 
 const MAX_REFERENCE_IMAGES = 14;
+const MAX_REFERENCE_VIDEOS = 3;
+const MAX_REFERENCE_AUDIOS = 3;
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
+const MAX_AUDIO_BYTES = 15 * 1024 * 1024;
 const TASK_POLL_INTERVAL_MS = 5000;
 
 type PendingReference = {
@@ -22,11 +27,27 @@ type PendingReference = {
   previewUrl: string;
 };
 
-function parseImageUrls(raw: string) {
+function parseUrls(raw: string) {
   return raw
     .split('\n')
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function buildReferencePreviews(
+  urls: string,
+  pending: PendingReference[],
+): ReferencePreview[] {
+  const confirmed = parseUrls(urls).map((url, index) => ({
+    id: `confirmed-${index}`,
+    src: url,
+  }));
+  const uploading = pending.map((item) => ({
+    id: item.id,
+    src: item.previewUrl,
+    uploading: true as const,
+  }));
+  return [...confirmed, ...uploading];
 }
 
 export default function GeneratePage() {
@@ -35,8 +56,13 @@ export default function GeneratePage() {
   const [prompt, setPrompt] = useState('');
   const [imageUrls, setImageUrls] = useState('');
   const [pendingRefs, setPendingRefs] = useState<PendingReference[]>([]);
+  const [videoUrls, setVideoUrls] = useState('');
+  const [pendingVideoRefs, setPendingVideoRefs] = useState<PendingReference[]>([]);
+  const [audioUrls, setAudioUrls] = useState('');
+  const [pendingAudioRefs, setPendingAudioRefs] = useState<PendingReference[]>([]);
   const [aspectRatio, setAspectRatio] = useState('16:9');
   const [frames, setFrames] = useState(121);
+  const [duration, setDuration] = useState(5);
   const [templateId, setTemplateId] = useState('hitchcock_dolly_in');
   const [cameraStrength, setCameraStrength] = useState('medium');
   const [tasks, setTasks] = useState<GenerationTask[]>([]);
@@ -116,18 +142,18 @@ export default function GeneratePage() {
     });
   }
 
-  const references = useMemo<ReferencePreview[]>(() => {
-    const confirmed = parseImageUrls(imageUrls).map((url, index) => ({
-      id: `confirmed-${index}`,
-      src: url,
-    }));
-    const pending = pendingRefs.map((item) => ({
-      id: item.id,
-      src: item.previewUrl,
-      uploading: true,
-    }));
-    return [...confirmed, ...pending];
-  }, [imageUrls, pendingRefs]);
+  const references = useMemo(
+    () => buildReferencePreviews(imageUrls, pendingRefs),
+    [imageUrls, pendingRefs],
+  );
+  const videoReferences = useMemo(
+    () => buildReferencePreviews(videoUrls, pendingVideoRefs),
+    [videoUrls, pendingVideoRefs],
+  );
+  const audioReferences = useMemo(
+    () => buildReferencePreviews(audioUrls, pendingAudioRefs),
+    [audioUrls, pendingAudioRefs],
+  );
 
   useEffect(() => {
     resumeActiveSession().catch(() => undefined);
@@ -207,12 +233,17 @@ export default function GeneratePage() {
     if (next !== null) setMessage(next);
   }, [pollingTasks, tasks, message]);
 
+  function removeUrlAtIndex(raw: string, index: number) {
+    return parseUrls(raw)
+      .filter((_, i) => i !== index)
+      .join('\n');
+  }
+
   function removeReference(id: string) {
     if (id.startsWith('confirmed-')) {
       const index = Number(id.replace('confirmed-', ''));
-      const urls = parseImageUrls(imageUrls);
       if (!Number.isNaN(index)) {
-        setImageUrls(urls.filter((_, i) => i !== index).join('\n'));
+        setImageUrls(removeUrlAtIndex(imageUrls, index));
       }
       return;
     }
@@ -224,35 +255,146 @@ export default function GeneratePage() {
     });
   }
 
-  async function onUploadFile(file: File) {
-    const confirmedCount = parseImageUrls(imageUrls).length;
-    if (confirmedCount + pendingRefs.length >= MAX_REFERENCE_IMAGES) {
-      toast('参考图数量已达上限', 'error');
+  function removeVideoReference(id: string) {
+    if (id.startsWith('confirmed-')) {
+      const index = Number(id.replace('confirmed-', ''));
+      if (!Number.isNaN(index)) {
+        setVideoUrls(removeUrlAtIndex(videoUrls, index));
+      }
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast('图片大小不能超过 10MB', 'error');
+    setPendingVideoRefs((prev) => {
+      const target = prev.find((item) => item.id === id);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((item) => item.id !== id);
+    });
+  }
+
+  function removeAudioReference(id: string) {
+    if (id.startsWith('confirmed-')) {
+      const index = Number(id.replace('confirmed-', ''));
+      if (!Number.isNaN(index)) {
+        setAudioUrls(removeUrlAtIndex(audioUrls, index));
+      }
+      return;
+    }
+
+    setPendingAudioRefs((prev) => {
+      const target = prev.find((item) => item.id === id);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((item) => item.id !== id);
+    });
+  }
+
+  async function uploadReferenceFile(params: {
+    file: File;
+    maxBytes: number;
+    maxCount: number;
+    currentUrls: string;
+    pending: PendingReference[];
+    setUrls: (value: string) => void;
+    setPending: React.Dispatch<React.SetStateAction<PendingReference[]>>;
+    limitMessage: string;
+    sizeMessage: string;
+    successMessage: string;
+    previewType?: 'image' | 'video' | 'audio';
+  }) {
+    const {
+      file,
+      maxBytes,
+      maxCount,
+      currentUrls,
+      pending,
+      setUrls,
+      setPending,
+      limitMessage,
+      sizeMessage,
+      successMessage,
+      previewType = 'image',
+    } = params;
+
+    if (parseUrls(currentUrls).length + pending.length >= maxCount) {
+      toast(limitMessage, 'error');
+      return;
+    }
+
+    if (file.size > maxBytes) {
+      toast(sizeMessage, 'error');
       return;
     }
 
     const id = crypto.randomUUID();
-    const previewUrl = URL.createObjectURL(file);
-    setPendingRefs((prev) => [...prev, { id, previewUrl }]);
+    const previewUrl =
+      previewType === 'audio' ? '' : URL.createObjectURL(file);
+    setPending((prev) => [...prev, { id, previewUrl }]);
 
     try {
       const result = await api.uploadReference(file);
-      setImageUrls((prev) => (prev ? `${prev}\n${result.url}` : result.url));
-      toast('参考图已上传', 'success');
+      setUrls((prev) => (prev ? `${prev}\n${result.url}` : result.url));
+      toast(successMessage, 'success');
     } finally {
-      URL.revokeObjectURL(previewUrl);
-      setPendingRefs((prev) => prev.filter((item) => item.id !== id));
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPending((prev) => prev.filter((item) => item.id !== id));
     }
+  }
+
+  async function onUploadFile(file: File) {
+    await uploadReferenceFile({
+      file,
+      maxBytes: MAX_IMAGE_BYTES,
+      maxCount: MAX_REFERENCE_IMAGES,
+      currentUrls: imageUrls,
+      pending: pendingRefs,
+      setUrls: setImageUrls,
+      setPending: setPendingRefs,
+      limitMessage: '参考图数量已达上限',
+      sizeMessage: '图片大小不能超过 10MB',
+      successMessage: '参考图已上传',
+    });
+  }
+
+  async function onUploadVideoFile(file: File) {
+    await uploadReferenceFile({
+      file,
+      maxBytes: MAX_VIDEO_BYTES,
+      maxCount: MAX_REFERENCE_VIDEOS,
+      currentUrls: videoUrls,
+      pending: pendingVideoRefs,
+      setUrls: setVideoUrls,
+      setPending: setPendingVideoRefs,
+      limitMessage: '参考视频数量已达上限',
+      sizeMessage: '视频大小不能超过 200MB',
+      successMessage: '参考视频已上传',
+      previewType: 'video',
+    });
+  }
+
+  async function onUploadAudioFile(file: File) {
+    await uploadReferenceFile({
+      file,
+      maxBytes: MAX_AUDIO_BYTES,
+      maxCount: MAX_REFERENCE_AUDIOS,
+      currentUrls: audioUrls,
+      pending: pendingAudioRefs,
+      setUrls: setAudioUrls,
+      setPending: setPendingAudioRefs,
+      limitMessage: '参考音频数量已达上限',
+      sizeMessage: '音频大小不能超过 15MB',
+      successMessage: '参考音频已上传',
+      previewType: 'audio',
+    });
   }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (pendingRefs.length > 0) return;
+    if (
+      pendingRefs.length > 0 ||
+      pendingVideoRefs.length > 0 ||
+      pendingAudioRefs.length > 0
+    ) {
+      return;
+    }
 
     setLoading(true);
     setMessage('');
@@ -261,13 +403,28 @@ export default function GeneratePage() {
       if (model) body.model = model;
 
       if (type !== 'image') {
-        body.frames = frames;
+        if (type === 'video_seedance_r2v') {
+          body.duration = duration;
+          body.generate_audio = true;
+          body.watermark = false;
+        } else {
+          body.frames = frames;
+        }
       }
 
-      if (type === 'video_t2v') body.aspect_ratio = aspectRatio;
+      if (type === 'video_t2v' || type === 'video_seedance_r2v') {
+        body.aspect_ratio = aspectRatio;
+      }
 
       if (imageUrls.trim()) {
-        body.image_urls = parseImageUrls(imageUrls);
+        body.image_urls = parseUrls(imageUrls);
+      }
+
+      if (type === 'video_seedance_r2v') {
+        const parsedVideoUrls = parseUrls(videoUrls).slice(0, MAX_REFERENCE_VIDEOS);
+        const parsedAudioUrls = parseUrls(audioUrls).slice(0, MAX_REFERENCE_AUDIOS);
+        if (parsedVideoUrls.length) body.video_urls = parsedVideoUrls;
+        if (parsedAudioUrls.length) body.audio_urls = parsedAudioUrls;
       }
 
       if (type === 'video_i2v_recamera') {
@@ -291,7 +448,9 @@ export default function GeneratePage() {
       <div className="flex flex-col justify-between gap-md md:flex-row md:items-end">
         <div>
           <h2 className="text-headline-lg text-on-surface">创作中心</h2>
-          <p className="mt-1 text-on-surface-variant">接入即梦引擎，将创意转化为图片与视频素材</p>
+          <p className="mt-1 text-on-surface-variant">
+            即梦生图/视频 + 火山方舟 Seedance 2.0 多模态视频
+          </p>
         </div>
         <div className="flex items-center gap-sm">
           <span className="text-label-sm flex items-center gap-1 rounded-full border border-secondary-container/30 bg-secondary-container/20 px-3 py-1 text-on-secondary-container">
@@ -299,7 +458,7 @@ export default function GeneratePage() {
             即梦 API 已连接
           </span>
           <span className="text-label-sm rounded-full border border-outline-variant bg-surface-container-high px-3 py-1 text-on-surface-variant">
-            Seedance 3.0
+            Seedance 2.0
           </span>
         </div>
       </div>
@@ -323,6 +482,14 @@ export default function GeneratePage() {
             onTemplateIdChange={setTemplateId}
             cameraStrength={cameraStrength}
             onCameraStrengthChange={setCameraStrength}
+            videoReferences={videoReferences}
+            onRemoveVideoReference={removeVideoReference}
+            onUploadVideoFile={onUploadVideoFile}
+            audioReferences={audioReferences}
+            onRemoveAudioReference={removeAudioReference}
+            onUploadAudioFile={onUploadAudioFile}
+            duration={duration}
+            onDurationChange={setDuration}
             loading={loading}
             message={message}
             onUploadFile={onUploadFile}

@@ -29,7 +29,30 @@ export const MODEL_OPTIONS: Record<GenerationType, ModelOption[]> = {
   video_i2v_recamera: [
     { id: '720', label: '720P', reqKey: 'jimeng_i2v_recamera_v30' },
   ],
+  video_seedance_r2v: [
+    {
+      id: '2.0',
+      label: 'Seedance 2.0',
+      reqKey: 'doubao-seedance-2-0-260128',
+    },
+    {
+      id: '2.0-fast',
+      label: 'Seedance 2.0 Fast',
+      reqKey: 'doubao-seedance-2-0-fast-260128',
+    },
+    {
+      id: '2.0-mini',
+      label: 'Seedance 2.0 Mini',
+      reqKey: 'doubao-seedance-2-0-mini-260615',
+    },
+  ],
 };
+
+const ARK_REQ_KEY_PREFIX = 'doubao-seedance-';
+
+export function isArkVideoReqKey(reqKey: string): boolean {
+  return reqKey.startsWith(ARK_REQ_KEY_PREFIX);
+}
 
 const GENERATION_TYPES = new Set<string>(Object.keys(MODEL_OPTIONS));
 

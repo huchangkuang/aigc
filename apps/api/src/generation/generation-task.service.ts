@@ -4,10 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { GenerationStatus, GenerationType, Prisma } from '@prisma/client';
+import { ArkVideoService } from '../ark/ark-video.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { JimengService } from '../jimeng/jimeng.service';
+import { buildArkCreateBody } from './ark-payload';
 import { CreateGenerationTaskDto } from './dto/create-generation-task.dto';
 import {
+  isArkVideoReqKey,
   resolveModelId,
   resolveReqKey,
 } from './generation-capabilities';
@@ -17,6 +20,7 @@ export class GenerationTaskService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jimeng: JimengService,
+    private readonly ark: ArkVideoService,
   ) {}
 
   async create(userId: string, dto: CreateGenerationTaskDto) {
@@ -32,9 +36,6 @@ export class GenerationTaskService {
     }
 
     const inputParams = this.buildInputParams(dto, modelId);
-    const jimengPayload = { ...inputParams };
-    delete jimengPayload.model;
-
     const task = await this.prisma.generationTask.create({
       data: {
         userId,
@@ -46,15 +47,14 @@ export class GenerationTaskService {
     });
 
     try {
-      const response = await this.jimeng.submitTask(reqKey, jimengPayload);
-      if (response.code !== 10000 || !response.data?.task_id) {
-        throw new Error(response.message ?? 'Jimeng submit failed');
-      }
+      const externalTaskId = isArkVideoReqKey(reqKey)
+        ? await this.submitArkTask(reqKey, inputParams)
+        : await this.submitJimengTask(reqKey, inputParams);
 
       return this.prisma.generationTask.update({
         where: { id: task.id },
         data: {
-          jimengTaskId: response.data.task_id,
+          jimengTaskId: externalTaskId,
           status: GenerationStatus.processing,
         },
       });
@@ -155,6 +155,60 @@ export class GenerationTaskService {
     });
   }
 
+  private async submitJimengTask(
+    reqKey: string,
+    inputParams: Prisma.JsonObject,
+  ): Promise<string> {
+    const jimengPayload = { ...inputParams };
+    delete jimengPayload.model;
+
+    const response = await this.jimeng.submitTask(reqKey, jimengPayload);
+    if (response.code !== 10000 || !response.data?.task_id) {
+      throw new Error(response.message ?? 'Jimeng submit failed');
+    }
+    return response.data.task_id;
+  }
+
+  private async submitArkTask(
+    reqKey: string,
+    inputParams: Prisma.JsonObject,
+  ): Promise<string> {
+    const body = buildArkCreateBody(reqKey, {
+      prompt: String(inputParams.prompt ?? ''),
+      image_urls: this.readStringArray(inputParams.image_urls),
+      video_urls: this.readStringArray(inputParams.video_urls),
+      audio_urls: this.readStringArray(inputParams.audio_urls),
+      aspect_ratio:
+        typeof inputParams.aspect_ratio === 'string'
+          ? inputParams.aspect_ratio
+          : undefined,
+      duration:
+        typeof inputParams.duration === 'number'
+          ? inputParams.duration
+          : undefined,
+      generate_audio:
+        typeof inputParams.generate_audio === 'boolean'
+          ? inputParams.generate_audio
+          : undefined,
+      watermark:
+        typeof inputParams.watermark === 'boolean'
+          ? inputParams.watermark
+          : undefined,
+    });
+
+    const response = await this.ark.createTask(body);
+    if (!response.id) {
+      throw new Error('Ark submit failed: missing task id');
+    }
+    return response.id;
+  }
+
+  private readStringArray(value: unknown): string[] | undefined {
+    if (!Array.isArray(value)) return undefined;
+    const items = value.filter((item): item is string => typeof item === 'string');
+    return items.length ? items : undefined;
+  }
+
   private validateDto(dto: CreateGenerationTaskDto) {
     if (
       dto.type === GenerationType.video_i2v_recamera &&
@@ -181,6 +235,15 @@ export class GenerationTaskService {
     ) {
       throw new BadRequestException('first_tail requires exactly 2 images');
     }
+
+    if (dto.type === GenerationType.video_seedance_r2v) {
+      if (!this.ark.isConfigured()) {
+        throw new BadRequestException('Seedance API is not configured');
+      }
+      if (dto.duration !== undefined && (dto.duration < 4 || dto.duration > 15)) {
+        throw new BadRequestException('duration must be between 4 and 15 seconds');
+      }
+    }
   }
 
   private buildInputParams(
@@ -193,7 +256,10 @@ export class GenerationTaskService {
     };
 
     if (dto.image_urls) params.image_urls = dto.image_urls;
+    if (dto.video_urls) params.video_urls = dto.video_urls;
+    if (dto.audio_urls) params.audio_urls = dto.audio_urls;
     if (dto.frames !== undefined) params.frames = dto.frames;
+    if (dto.duration !== undefined) params.duration = dto.duration;
     if (dto.aspect_ratio) params.aspect_ratio = dto.aspect_ratio;
     if (dto.seed !== undefined) params.seed = dto.seed;
     if (dto.template_id) params.template_id = dto.template_id;
@@ -201,6 +267,10 @@ export class GenerationTaskService {
     if (dto.force_single !== undefined) params.force_single = dto.force_single;
     if (dto.width !== undefined) params.width = dto.width;
     if (dto.height !== undefined) params.height = dto.height;
+    if (dto.generate_audio !== undefined) {
+      params.generate_audio = dto.generate_audio;
+    }
+    if (dto.watermark !== undefined) params.watermark = dto.watermark;
 
     return params;
   }
