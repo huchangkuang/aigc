@@ -1,18 +1,7 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
-import { Geist_Mono, Inter } from 'next/font/google';
 import { ToastHost } from '@/components/toast-host';
 import './globals.css';
-
-const inter = Inter({
-  variable: '--font-inter',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
 
 const MATERIAL_SYMBOLS_URL =
   'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block';
@@ -30,7 +19,7 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className={`${inter.variable} ${geistMono.variable} h-full dark antialiased`}
+      className="h-full dark antialiased"
       suppressHydrationWarning
     >
       <head>

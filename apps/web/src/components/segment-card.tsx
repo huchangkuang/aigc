@@ -21,7 +21,9 @@ export function SegmentCard({
   previewUrl,
   onGenerate,
 }: SegmentCardProps) {
-  const [model, setModel] = useState(segment.model ?? '2.0');
+  const [model, setModel] = useState<NonNullable<Segment['model']>>(
+    segment.model ?? '2.0',
+  );
 
   return (
     <article className="glass-panel rounded-xl p-md">
@@ -51,7 +53,9 @@ export function SegmentCard({
       <div className="flex flex-wrap items-center gap-sm">
         <select
           value={model}
-          onChange={(event) => setModel(event.target.value)}
+          onChange={(event) =>
+            setModel(event.target.value as NonNullable<Segment['model']>)
+          }
           className="rounded-lg border border-outline-variant bg-surface-container-low px-sm py-1.5 text-sm"
         >
           {SEEDANCE_MODELS.map((item) => (

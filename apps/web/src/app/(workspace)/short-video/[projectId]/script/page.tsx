@@ -2,7 +2,8 @@
 
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { api, type ShortVideoProject } from '@/lib/api-client';
+import { api } from '@/lib/api-client';
+import type { ShortVideoProject } from '@/lib/short-video-types';
 import { flattenEntities } from '@/lib/short-video-types';
 
 export default function ScriptPage() {

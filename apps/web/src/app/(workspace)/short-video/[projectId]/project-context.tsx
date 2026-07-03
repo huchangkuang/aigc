@@ -1,7 +1,8 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { api, type ShortVideoProject } from '@/lib/api-client';
+import { api } from '@/lib/api-client';
+import type { ShortVideoProject } from '@/lib/short-video-types';
 
 type ProjectContextValue = {
   project: ShortVideoProject;
