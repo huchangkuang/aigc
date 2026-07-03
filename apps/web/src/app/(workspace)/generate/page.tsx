@@ -293,7 +293,7 @@ export default function GeneratePage() {
     maxCount: number;
     currentUrls: string;
     pending: PendingReference[];
-    setUrls: (value: string) => void;
+    setUrls: React.Dispatch<React.SetStateAction<string>>;
     setPending: React.Dispatch<React.SetStateAction<PendingReference[]>>;
     limitMessage: string;
     sizeMessage: string;
