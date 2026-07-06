@@ -4,15 +4,18 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { EntityCard } from '@/components/entity-card';
 import { api, type EntityImageItem } from '@/lib/api-client';
+import { isActiveTaskStatus } from '@/lib/generation-output';
 import type { ShortVideoProject } from '@/lib/short-video-types';
 import { flattenEntities } from '@/lib/short-video-types';
+import { useGenerationTaskPoll } from '@/lib/use-generation-task-poll';
+import { toast } from '@/stores/toast-store';
 
 export default function ProjectAssetsPage() {
   const params = useParams<{ projectId: string }>();
   const projectId = params.projectId;
   const [project, setProject] = useState<ShortVideoProject | null>(null);
   const [histories, setHistories] = useState<Record<string, EntityImageItem[]>>({});
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
   const [adoptBusyId, setAdoptBusyId] = useState<string | null>(null);
   const [uploadBusyId, setUploadBusyId] = useState<string | null>(null);
 
@@ -37,17 +40,39 @@ export default function ProjectAssetsPage() {
     }
   }
 
+  const entities = flattenEntities(project?.parsedEntities);
+  const watchedTaskIds = entities.flatMap((entity) =>
+    entity.imageTaskId ? [entity.imageTaskId] : [],
+  );
+
+  const { isTaskActive } = useGenerationTaskPoll({
+    taskIds: watchedTaskIds,
+    onSettled: (tasks) => {
+      setSubmittingId(null);
+      if (tasks.some((task) => task.status === 'failed')) {
+        toast('生成失败，请重试', 'error');
+      }
+      reload().catch(() => undefined);
+    },
+  });
+
   useEffect(() => {
     reload().catch(() => undefined);
   }, [projectId]);
 
   async function generate(entityId: string, prompt: string) {
-    setBusyId(entityId);
+    setSubmittingId(entityId);
     try {
-      await api.generateEntityImage(projectId, entityId, prompt);
-      await reload();
-    } finally {
-      setBusyId(null);
+      const task = await api.generateEntityImage(projectId, entityId, prompt);
+      const projectData = await api.getShortVideoProject(projectId);
+      setProject(projectData);
+      const active = await api.listActiveTasks({ silent: true });
+      if (!active.some((item) => item.id === task.id && isActiveTaskStatus(item.status))) {
+        await reload();
+        setSubmittingId(null);
+      }
+    } catch {
+      setSubmittingId(null);
     }
   }
 
@@ -72,8 +97,6 @@ export default function ProjectAssetsPage() {
     }
   }
 
-  const entities = flattenEntities(project?.parsedEntities);
-
   return (
     <div className="space-y-md">
       <div>
@@ -89,7 +112,9 @@ export default function ProjectAssetsPage() {
               key={entity.id}
               entity={entity}
               historyItems={histories[entity.id] ?? []}
-              busy={busyId === entity.id}
+              generating={
+                submittingId === entity.id || isTaskActive(entity.imageTaskId)
+              }
               adoptBusy={adoptBusyId === entity.id}
               uploadBusy={uploadBusyId === entity.id}
               onGenerate={(prompt) => generate(entity.id, prompt)}

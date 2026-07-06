@@ -153,6 +153,9 @@ export const api = {
   listActiveTasks(options?: ApiOptions) {
     return apiFetch<ActiveGenerationTask[]>('/generation-tasks/active', {}, options);
   },
+  getGenerationTask(id: string, options?: ApiOptions) {
+    return apiFetch<GenerationTask>(`/generation-tasks/${id}`, {}, options);
+  },
   listModels(type: string, options?: ApiOptions) {
     return apiFetch<GenerationModelOption[]>(
       `/generation/models?type=${encodeURIComponent(type)}`,

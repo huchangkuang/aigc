@@ -1,6 +1,11 @@
 import type { GenerationTask, TaskAsset } from '@/lib/api-client';
 
 export const GENERATION_SUBMIT_MESSAGE = '任务已提交，正在生成…';
+export const GENERATION_TASK_POLL_INTERVAL_MS = 5000;
+
+export function isActiveTaskStatus(status: string) {
+  return status === 'pending' || status === 'processing';
+}
 
 export function hasActiveTasks(tasks: GenerationTask[]) {
   return tasks.some(

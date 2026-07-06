@@ -8,6 +8,7 @@ type EntityImagePreviewProps = {
   adopted: boolean;
   showAdopt: boolean;
   adoptBusy?: boolean;
+  generating?: boolean;
   onAdopt: () => void;
 };
 
@@ -17,6 +18,7 @@ export function EntityImagePreview({
   adopted,
   showAdopt,
   adoptBusy,
+  generating,
   onAdopt,
 }: EntityImagePreviewProps) {
   return (
@@ -30,6 +32,12 @@ export function EntityImagePreview({
           <span className="text-label-sm">暂无参考图</span>
         </div>
       )}
+      {generating ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface/80 backdrop-blur-sm">
+          <Icon name="progress_activity" className="animate-spin text-3xl text-primary" />
+          <span className="text-label-sm font-medium text-on-surface">生成中…</span>
+        </div>
+      ) : null}
       {adopted ? (
         <span className="absolute right-2 top-2 inline-flex items-center gap-0.5 rounded-full bg-emerald-600/90 px-2 py-0.5 text-[10px] font-medium text-white">
           <Icon name="check" className="text-xs" />

@@ -11,6 +11,7 @@ type EntityCardProps = {
   entity: ParsedEntity;
   historyItems: EntityImageItem[];
   busy?: boolean;
+  generating?: boolean;
   adoptBusy?: boolean;
   uploadBusy?: boolean;
   onGenerate: (prompt: string) => void;
@@ -22,6 +23,7 @@ export function EntityCard({
   entity,
   historyItems,
   busy,
+  generating,
   adoptBusy,
   uploadBusy,
   onGenerate,
@@ -43,6 +45,8 @@ export function EntityCard({
   const previewItem = historyItems.find((item) => item.id === previewAssetId);
   const adopted = Boolean(previewAssetId && previewAssetId === entity.assetId);
 
+  const isGenerating = Boolean(busy || generating);
+
   return (
     <article className="glass-panel overflow-hidden rounded-xl">
       <div className="flex flex-col gap-md p-md lg:flex-row">
@@ -53,6 +57,7 @@ export function EntityCard({
             adopted={adopted}
             showAdopt={Boolean(previewAssetId && !adopted)}
             adoptBusy={adoptBusy}
+            generating={isGenerating}
             onAdopt={() => previewAssetId && onAdopt(previewAssetId)}
           />
           <EntityImageHistory
@@ -96,12 +101,15 @@ export function EntityCard({
           <div className="flex justify-end pt-xs">
             <button
               type="button"
-              disabled={busy || !prompt.trim()}
+              disabled={isGenerating || !prompt.trim()}
               onClick={() => onGenerate(prompt.trim())}
               className="gradient-button inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-md py-sm text-sm font-bold text-on-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Icon name="auto_awesome" className="text-base" />
-              {busy ? '生成中…' : historyItems.length ? '重新生成' : '生成参考图'}
+              <Icon
+                name={isGenerating ? 'progress_activity' : 'auto_awesome'}
+                className={`text-base ${isGenerating ? 'animate-spin' : ''}`}
+              />
+              {isGenerating ? '生成中…' : historyItems.length ? '重新生成' : '生成参考图'}
             </button>
           </div>
         </div>

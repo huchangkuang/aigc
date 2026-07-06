@@ -9,6 +9,7 @@ type SegmentCardProps = {
   index: number;
   missingRefs?: boolean;
   busy?: boolean;
+  generating?: boolean;
   previewUrl?: string;
   onGenerate: (model: string) => void;
 };
@@ -18,9 +19,11 @@ export function SegmentCard({
   index,
   missingRefs,
   busy,
+  generating,
   previewUrl,
   onGenerate,
 }: SegmentCardProps) {
+  const isGenerating = Boolean(busy || generating);
   const [model, setModel] = useState<NonNullable<Segment['model']>>(
     segment.model ?? '2.0',
   );
@@ -41,6 +44,12 @@ export function SegmentCard({
               <span className="text-label-sm">待生成视频</span>
             </div>
           )}
+          {isGenerating ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface/80 backdrop-blur-sm">
+              <Icon name="progress_activity" className="animate-spin text-3xl text-primary" />
+              <span className="text-label-sm font-medium text-on-surface">生成中…</span>
+            </div>
+          ) : null}
           <span className="absolute left-3 top-3 rounded-md bg-surface/90 px-2 py-0.5 text-xs font-bold text-primary backdrop-blur-sm">
             #{index + 1}
           </span>
@@ -105,12 +114,15 @@ export function SegmentCard({
             </select>
             <button
               type="button"
-              disabled={busy}
+              disabled={isGenerating}
               onClick={() => onGenerate(model)}
               className="gradient-button inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-md py-sm text-sm font-bold text-on-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Icon name="bolt" className="text-base" />
-              {busy ? '生成中…' : previewUrl ? '重新生成' : 'AI 生成'}
+              <Icon
+                name={isGenerating ? 'progress_activity' : 'bolt'}
+                className={`text-base ${isGenerating ? 'animate-spin' : ''}`}
+              />
+              {isGenerating ? '生成中…' : previewUrl ? '重新生成' : 'AI 生成'}
             </button>
           </div>
         </div>

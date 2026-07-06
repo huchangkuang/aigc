@@ -2,10 +2,14 @@
 
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { Icon } from '@/components/icon';
 import { SegmentCard } from '@/components/segment-card';
 import { api, type Asset } from '@/lib/api-client';
+import { isActiveTaskStatus } from '@/lib/generation-output';
 import type { ShortVideoProject } from '@/lib/short-video-types';
 import { flattenEntities } from '@/lib/short-video-types';
+import { useGenerationTaskPoll } from '@/lib/use-generation-task-poll';
+import { toast } from '@/stores/toast-store';
 
 export default function EditPage() {
   const params = useParams<{ projectId: string }>();
@@ -13,7 +17,7 @@ export default function EditPage() {
   const [project, setProject] = useState<ShortVideoProject | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [parsing, setParsing] = useState(false);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
 
   async function reload() {
     const [projectData, assetList] = await Promise.all([
@@ -23,6 +27,22 @@ export default function EditPage() {
     setProject(projectData);
     setAssets(assetList);
   }
+
+  const segments = project?.segments?.segments ?? [];
+  const watchedTaskIds = segments.flatMap((segment) =>
+    segment.videoTaskId ? [segment.videoTaskId] : [],
+  );
+
+  const { isTaskActive } = useGenerationTaskPoll({
+    taskIds: watchedTaskIds,
+    onSettled: (tasks) => {
+      setSubmittingId(null);
+      if (tasks.some((task) => task.status === 'failed')) {
+        toast('生成失败，请重试', 'error');
+      }
+      reload().catch(() => undefined);
+    },
+  });
 
   useEffect(() => {
     reload().catch(() => undefined);
@@ -39,12 +59,18 @@ export default function EditPage() {
   }
 
   async function generate(segmentId: string, model: string) {
-    setBusyId(segmentId);
+    setSubmittingId(segmentId);
     try {
-      await api.generateSegmentVideo(projectId, segmentId, model);
-      await reload();
-    } finally {
-      setBusyId(null);
+      const task = await api.generateSegmentVideo(projectId, segmentId, model);
+      const projectData = await api.getShortVideoProject(projectId);
+      setProject(projectData);
+      const active = await api.listActiveTasks({ silent: true });
+      if (!active.some((item) => item.id === task.id && isActiveTaskStatus(item.status))) {
+        await reload();
+        setSubmittingId(null);
+      }
+    } catch {
+      setSubmittingId(null);
     }
   }
 
@@ -63,8 +89,6 @@ export default function EditPage() {
     return assets.find((item) => item.id === assetId && item.type === 'video')?.previewUrl;
   }
 
-  const segments = project?.segments?.segments ?? [];
-
   return (
     <div className="space-y-md">
       <div className="flex flex-wrap items-end justify-between gap-sm">
@@ -76,8 +100,12 @@ export default function EditPage() {
           type="button"
           disabled={parsing}
           onClick={parseSegments}
-          className="gradient-button rounded-lg px-md py-sm text-sm font-bold text-on-primary disabled:opacity-50"
+          className="gradient-button inline-flex items-center gap-1.5 rounded-lg px-md py-sm text-sm font-bold text-on-primary disabled:opacity-50"
         >
+          <Icon
+            name={parsing ? 'progress_activity' : 'movie'}
+            className={`text-base ${parsing ? 'animate-spin' : ''}`}
+          />
           {parsing ? '解析中…' : '解析分镜'}
         </button>
       </div>
@@ -91,7 +119,9 @@ export default function EditPage() {
               segment={segment}
               index={index}
               missingRefs={segmentMissingRefs(segment)}
-              busy={busyId === segment.id}
+              generating={
+                submittingId === segment.id || isTaskActive(segment.videoTaskId)
+              }
               previewUrl={previewForSegment(segment.videoAssetId)}
               onGenerate={(model) => generate(segment.id, model)}
             />

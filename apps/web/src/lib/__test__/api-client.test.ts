@@ -90,6 +90,29 @@ describe('short video api', () => {
     );
   });
 
+  it('calls getGenerationTask endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({
+        code: 0,
+        message: 'success',
+        data: {
+          id: 't1',
+          type: 'image',
+          status: 'done',
+          inputParams: {},
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await api.getGenerationTask('t1');
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/generation-tasks/t1'),
+      expect.any(Object),
+    );
+  });
+
   it('calls entity image history endpoints', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       json: async () => ({ code: 0, message: 'success', data: { items: [] } }),
