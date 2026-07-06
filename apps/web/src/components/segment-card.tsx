@@ -1,32 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Icon } from '@/components/icon';
+import { SegmentPromptEditor, type SegmentPromptEditorProps } from '@/components/segment-prompt-editor';
+import type { AdoptedEntityImageItem } from '@/lib/api-client';
 import { SEEDANCE_MODELS, type Segment } from '@/lib/short-video-types';
 
 type SegmentCardProps = {
   segment: Segment;
   index: number;
-  missingRefs?: boolean;
+  mentionItems: AdoptedEntityImageItem[];
   busy?: boolean;
-  generating?: boolean;
   previewUrl?: string;
-  onGenerate: (model: string) => void;
+  onBlurSave: SegmentPromptEditorProps['onBlurSave'];
+  onGenerate: (payload: { model: string; prompt: string; assetIds: string[] }) => void;
 };
 
 export function SegmentCard({
   segment,
   index,
-  missingRefs,
+  mentionItems,
   busy,
-  generating,
   previewUrl,
+  onBlurSave,
   onGenerate,
 }: SegmentCardProps) {
-  const isGenerating = Boolean(busy || generating);
   const [model, setModel] = useState<NonNullable<Segment['model']>>(
     segment.model ?? '2.0',
   );
+  const latestRef = useRef({ prompt: segment.seedancePrompt, assetIds: [] as string[] });
 
   return (
     <article className="glass-panel overflow-hidden rounded-xl">
@@ -44,12 +46,6 @@ export function SegmentCard({
               <span className="text-label-sm">待生成视频</span>
             </div>
           )}
-          {isGenerating ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface/80 backdrop-blur-sm">
-              <Icon name="progress_activity" className="animate-spin text-3xl text-primary" />
-              <span className="text-label-sm font-medium text-on-surface">生成中…</span>
-            </div>
-          ) : null}
           <span className="absolute left-3 top-3 rounded-md bg-surface/90 px-2 py-0.5 text-xs font-bold text-primary backdrop-blur-sm">
             #{index + 1}
           </span>
@@ -63,12 +59,6 @@ export function SegmentCard({
                 {segment.durationSec}s
               </span>
             </h3>
-            {missingRefs ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-400">
-                <Icon name="warning" className="text-sm" />
-                部分参考图缺失
-              </span>
-            ) : null}
           </div>
 
           {segment.visualStyle ? (
@@ -81,21 +71,14 @@ export function SegmentCard({
 
           <p className="text-sm leading-relaxed text-on-surface">{segment.sceneDescription}</p>
 
-          <div>
-            <label
-              htmlFor={`segment-prompt-${segment.id}`}
-              className="text-label-sm mb-1 block font-medium text-on-surface-variant"
-            >
-              Seedance 提示词
-            </label>
-            <textarea
-              id={`segment-prompt-${segment.id}`}
-              readOnly
-              value={segment.seedancePrompt}
-              rows={3}
-              className="w-full rounded-lg border border-outline-variant/40 bg-surface-container-low/60 p-sm text-sm leading-relaxed text-on-surface-variant"
-            />
-          </div>
+          <SegmentPromptEditor
+            segment={segment}
+            mentionItems={mentionItems}
+            onBlurSave={onBlurSave}
+            onStateChange={({ prompt, assetIds }) => {
+              latestRef.current = { prompt, assetIds };
+            }}
+          />
 
           <div className="flex flex-wrap items-center gap-sm border-t border-outline-variant/20 pt-sm">
             <select
@@ -114,15 +97,18 @@ export function SegmentCard({
             </select>
             <button
               type="button"
-              disabled={isGenerating}
-              onClick={() => onGenerate(model)}
+              disabled={busy}
+              onClick={() =>
+                onGenerate({
+                  model,
+                  prompt: latestRef.current.prompt,
+                  assetIds: latestRef.current.assetIds,
+                })
+              }
               className="gradient-button inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-md py-sm text-sm font-bold text-on-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Icon
-                name={isGenerating ? 'progress_activity' : 'bolt'}
-                className={`text-base ${isGenerating ? 'animate-spin' : ''}`}
-              />
-              {isGenerating ? '生成中…' : previewUrl ? '重新生成' : 'AI 生成'}
+              <Icon name="bolt" className="text-base" />
+              {busy ? '生成中…' : previewUrl ? '重新生成' : 'AI 生成'}
             </button>
           </div>
         </div>

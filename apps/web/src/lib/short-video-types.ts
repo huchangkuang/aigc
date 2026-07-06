@@ -24,6 +24,8 @@ export type Segment = {
   sceneRefId?: string;
   propRefIds: string[];
   seedancePrompt: string;
+  referenceAssetIds?: string[];
+  seedancePromptDoc?: Record<string, unknown>;
   model?: '2.0' | '2.0-fast' | '2.0-mini';
   videoTaskId?: string;
   videoAssetId?: string;

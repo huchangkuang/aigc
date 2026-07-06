@@ -37,7 +37,7 @@ describe('entity-merge', () => {
     expect(merged.characters[0].description).toBe('new desc');
   });
 
-  it('preserves videoAssetId on segment re-parse', () => {
+  it('preserves videoAssetId on segment re-parse without user edits', () => {
     const existing: SegmentsData = {
       segments: [
         {
@@ -70,5 +70,47 @@ describe('entity-merge', () => {
     const merged = mergeSegments(existing, incoming);
     expect(merged.segments[0].videoAssetId).toBe('video-1');
     expect(merged.segments[0].durationSec).toBe(6);
+    expect(merged.segments[0].seedancePrompt).toBe('new prompt');
+  });
+
+  it('preserves user-edited prompt fields on segment re-parse', () => {
+    const existing: SegmentsData = {
+      segments: [
+        {
+          id: 'seg1',
+          order: 0,
+          durationSec: 5,
+          sceneDescription: 'old',
+          characterRefIds: [],
+          propRefIds: [],
+          seedancePrompt: 'user edited',
+          referenceAssetIds: ['asset-1'],
+          seedancePromptDoc: { type: 'doc', content: [] },
+          videoAssetId: 'video-1',
+        },
+      ],
+    };
+
+    const incoming: SegmentsData = {
+      segments: [
+        {
+          id: 'seg1',
+          order: 0,
+          durationSec: 6,
+          sceneDescription: 'new',
+          characterRefIds: [],
+          propRefIds: [],
+          seedancePrompt: 'new prompt',
+        },
+      ],
+    };
+
+    const merged = mergeSegments(existing, incoming);
+    expect(merged.segments[0].videoAssetId).toBe('video-1');
+    expect(merged.segments[0].durationSec).toBe(6);
+    expect(merged.segments[0].sceneDescription).toBe('new');
+    expect(merged.segments[0].seedancePrompt).toBe('user edited');
+    expect(merged.segments[0].referenceAssetIds).toEqual(['asset-1']);
+    expect(merged.segments[0].seedancePromptDoc).toEqual({ type: 'doc', content: [] });
   });
 });

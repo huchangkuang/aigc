@@ -27,6 +27,12 @@ import {
 import { ShortVideoTaskLinkerService } from './short-video-task-linker.service';
 import type { ParsedEntities, SegmentsData } from './short-video.types';
 
+const MAX_SEGMENT_REFERENCE_IMAGES = 14;
+
+function flattenEntities(data: ParsedEntities) {
+  return [...data.characters, ...data.scenes, ...data.props];
+}
+
 @Injectable()
 export class ShortVideoProjectService {
   constructor(
@@ -304,11 +310,78 @@ export class ShortVideoProjectService {
     };
   }
 
-  async generateSegmentVideo(
+  async listAdoptedEntityImages(userId: string, projectId: string) {
+    const project = await this.getForUser(userId, projectId);
+    const entities = project.parsedEntities as ParsedEntities | null;
+    if (!entities) {
+      return { items: [] };
+    }
+
+    const adopted = flattenEntities(entities).filter((entity) => entity.assetId);
+    if (!adopted.length) {
+      return { items: [] };
+    }
+
+    const assetIds = adopted.map((entity) => entity.assetId!);
+    const assets = await this.prisma.asset.findMany({
+      where: { id: { in: assetIds }, userId, deletedAt: null },
+    });
+    const assetById = new Map(assets.map((asset) => [asset.id, asset]));
+
+    const items = await Promise.all(
+      adopted
+        .filter((entity) => assetById.has(entity.assetId!))
+        .map(async (entity) => {
+          const asset = assetById.get(entity.assetId!)!;
+          return {
+            assetId: asset.id,
+            entityId: entity.id,
+            entityName: entity.name,
+            entityKind: entity.kind,
+            previewUrl: await this.storage.getSignedUrl(asset.ossKey),
+          };
+        }),
+    );
+
+    return { items };
+  }
+
+  private adoptedAssetIds(entities: ParsedEntities | null | undefined) {
+    if (!entities) return new Set<string>();
+    return new Set(
+      flattenEntities(entities)
+        .map((entity) => entity.assetId)
+        .filter((id): id is string => Boolean(id)),
+    );
+  }
+
+  private assertAdoptedAssetIds(
+    entities: ParsedEntities | null | undefined,
+    assetIds: string[] | undefined,
+  ) {
+    if (!assetIds?.length) return;
+    const allowed = this.adoptedAssetIds(entities);
+    for (const assetId of assetIds) {
+      if (!allowed.has(assetId)) {
+        throw new BadRequestException('Asset not valid for this project');
+      }
+    }
+    if (assetIds.length > MAX_SEGMENT_REFERENCE_IMAGES) {
+      throw new BadRequestException(
+        `At most ${MAX_SEGMENT_REFERENCE_IMAGES} reference images allowed`,
+      );
+    }
+  }
+
+  async updateSegmentPrompt(
     userId: string,
     projectId: string,
     segmentId: string,
-    model?: string,
+    data: {
+      seedancePrompt: string;
+      referenceAssetIds?: string[];
+      seedancePromptDoc: Record<string, unknown>;
+    },
   ) {
     const project = await this.getForUser(userId, projectId);
     const segments = project.segments as SegmentsData | null;
@@ -318,28 +391,54 @@ export class ShortVideoProjectService {
     }
 
     const entities = project.parsedEntities as ParsedEntities | null;
-    const refIds = [
-      ...segment.characterRefIds,
-      ...(segment.sceneRefId ? [segment.sceneRefId] : []),
-      ...segment.propRefIds,
-    ];
+    this.assertAdoptedAssetIds(entities, data.referenceAssetIds);
+
+    const updatedSegments = updateSegmentInData(segments!, segmentId, {
+      seedancePrompt: data.seedancePrompt,
+      referenceAssetIds: data.referenceAssetIds ?? [],
+      seedancePromptDoc: data.seedancePromptDoc,
+    });
+
+    await this.prisma.shortVideoProject.update({
+      where: { id: projectId },
+      data: { segments: updatedSegments as unknown as Prisma.InputJsonValue },
+    });
+
+    return { id: segmentId };
+  }
+
+  async generateSegmentVideo(
+    userId: string,
+    projectId: string,
+    segmentId: string,
+    dto: { prompt: string; model?: string; assetIds?: string[] },
+  ) {
+    const project = await this.getForUser(userId, projectId);
+    const segments = project.segments as SegmentsData | null;
+    const segment = findSegment(segments, segmentId);
+    if (!segment) {
+      throw new NotFoundException('Segment not found');
+    }
+
+    const entities = project.parsedEntities as ParsedEntities | null;
+    const assetIds = dto.assetIds ?? [];
+    this.assertAdoptedAssetIds(entities, assetIds);
 
     const imageUrls: string[] = [];
-    for (const refId of refIds) {
-      const entity = findEntity(entities, refId);
-      if (!entity?.assetId) continue;
+    for (const assetId of assetIds) {
       const asset = await this.prisma.asset.findFirst({
-        where: { id: entity.assetId, userId },
+        where: { id: assetId, userId, deletedAt: null },
       });
       if (asset) {
         imageUrls.push(await this.storage.getSignedUrl(asset.ossKey));
       }
     }
 
+    const model = (dto.model ?? segment.model ?? '2.0') as SegmentsData['segments'][0]['model'];
     const taskDto: CreateGenerationTaskDto = {
       type: 'video_seedance_r2v',
-      prompt: segment.seedancePrompt,
-      model: model ?? segment.model ?? '2.0',
+      prompt: dto.prompt,
+      model,
       duration: segment.durationSec,
       aspect_ratio: '16:9',
       generate_audio: true,
@@ -351,8 +450,10 @@ export class ShortVideoProjectService {
     const task = await this.generation.create(userId, taskDto);
 
     const updatedSegments = updateSegmentInData(segments!, segmentId, {
+      seedancePrompt: dto.prompt,
+      referenceAssetIds: assetIds,
       videoTaskId: task.id,
-      model: (model ?? segment.model ?? '2.0') as SegmentsData['segments'][0]['model'],
+      model,
     });
 
     await this.prisma.shortVideoProject.update({

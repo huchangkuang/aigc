@@ -45,6 +45,16 @@ export function mergeSegments(
 
   const merged = incoming.segments.map((item) => {
     const old = prev.get(item.id);
+    if (old?.seedancePromptDoc) {
+      return {
+        ...item,
+        videoTaskId: old.videoTaskId,
+        videoAssetId: old.videoAssetId,
+        seedancePrompt: old.seedancePrompt,
+        referenceAssetIds: old.referenceAssetIds,
+        seedancePromptDoc: old.seedancePromptDoc,
+      };
+    }
     return {
       ...item,
       videoTaskId: old?.videoTaskId,

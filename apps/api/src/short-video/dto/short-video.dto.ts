@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsArray, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateShortVideoProjectDto {
   @IsString()
@@ -24,9 +24,32 @@ export class GenerateEntityImageDto {
 }
 
 export class GenerateSegmentVideoDto {
+  @IsString()
+  @MaxLength(800)
+  prompt!: string;
+
   @IsOptional()
   @IsString()
   model?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  assetIds?: string[];
+}
+
+export class UpdateSegmentPromptDto {
+  @IsString()
+  @MaxLength(800)
+  seedancePrompt!: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  referenceAssetIds?: string[];
+
+  @IsObject()
+  seedancePromptDoc!: Record<string, unknown>;
 }
 
 export class AdoptEntityImageDto {

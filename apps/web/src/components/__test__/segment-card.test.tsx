@@ -1,34 +1,78 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { SegmentCard } from '../segment-card';
-import type { Segment } from '@/lib/short-video-types';
 
-vi.mock('@/components/icon', () => ({
-  Icon: ({ name }: { name: string }) => <span data-testid={`icon-${name}`} />,
+vi.mock('../segment-prompt-editor', () => ({
+  SegmentPromptEditor: ({
+    onStateChange,
+    onBlurSave,
+  }: {
+    onStateChange?: (payload: { prompt: string; assetIds: string[] }) => void;
+    onBlurSave: (payload: unknown) => void;
+  }) => (
+    <div>
+      <div data-testid="segment-prompt-editor">editor</div>
+      <button
+        type="button"
+        onClick={() => {
+          onStateChange?.({ prompt: 'edited prompt', assetIds: ['asset-1'] });
+          onBlurSave({
+            seedancePrompt: 'edited prompt',
+            referenceAssetIds: ['asset-1'],
+            seedancePromptDoc: { type: 'doc', content: [] },
+          });
+        }}
+      >
+        模拟编辑
+      </button>
+    </div>
+  ),
 }));
 
-const segment: Segment = {
-  id: 's1',
-  order: 1,
+const segment = {
+  id: 'seg1',
+  order: 0,
   durationSec: 8,
-  sceneDescription: '场景描述',
-  characterRefIds: [],
+  sceneDescription: '夜晚场景',
+  characterRefIds: ['c1'],
   propRefIds: [],
-  seedancePrompt: 'prompt',
+  seedancePrompt: 'parsed prompt',
 };
 
 describe('SegmentCard', () => {
-  it('shows generating overlay when generating', () => {
+  it('does not show missing reference warning', () => {
     render(
       <SegmentCard
         segment={segment}
         index={0}
-        generating
-        onGenerate={() => undefined}
+        mentionItems={[]}
+        onBlurSave={vi.fn()}
+        onGenerate={vi.fn()}
       />,
     );
 
-    expect(screen.getAllByText('生成中…').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByTestId('icon-progress_activity').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('部分参考图缺失')).not.toBeInTheDocument();
+  });
+
+  it('passes prompt and assetIds to onGenerate', () => {
+    const onGenerate = vi.fn();
+    render(
+      <SegmentCard
+        segment={segment}
+        index={0}
+        mentionItems={[]}
+        onBlurSave={vi.fn()}
+        onGenerate={onGenerate}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '模拟编辑' }));
+    fireEvent.click(screen.getByRole('button', { name: /AI 生成/ }));
+
+    expect(onGenerate).toHaveBeenCalledWith({
+      model: '2.0',
+      prompt: 'edited prompt',
+      assetIds: ['asset-1'],
+    });
   });
 });

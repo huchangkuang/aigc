@@ -14,6 +14,7 @@ import {
   AdoptEntityImageDto,
   GenerateEntityImageDto,
   GenerateSegmentVideoDto,
+  UpdateSegmentPromptDto,
   UploadEntityImageDto,
   UpdateShortVideoProjectDto,
 } from './dto/short-video.dto';
@@ -119,6 +120,21 @@ export class ShortVideoController {
     );
   }
 
+  @Get(':id/adopted-entity-images')
+  listAdoptedEntityImages(@Req() req: AuthRequest, @Param('id') id: string) {
+    return this.projects.listAdoptedEntityImages(req.user.id, id);
+  }
+
+  @Patch(':id/segments/:segmentId')
+  updateSegmentPrompt(
+    @Req() req: AuthRequest,
+    @Param('id') id: string,
+    @Param('segmentId') segmentId: string,
+    @Body() dto: UpdateSegmentPromptDto,
+  ) {
+    return this.projects.updateSegmentPrompt(req.user.id, id, segmentId, dto);
+  }
+
   @Post(':id/segments/:segmentId/generate-video')
   generateSegmentVideo(
     @Req() req: AuthRequest,
@@ -126,11 +142,6 @@ export class ShortVideoController {
     @Param('segmentId') segmentId: string,
     @Body() dto: GenerateSegmentVideoDto,
   ) {
-    return this.projects.generateSegmentVideo(
-      req.user.id,
-      id,
-      segmentId,
-      dto.model,
-    );
+    return this.projects.generateSegmentVideo(req.user.id, id, segmentId, dto);
   }
 }

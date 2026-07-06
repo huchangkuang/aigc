@@ -71,6 +71,14 @@ export type EntityImageItem = {
   adopted: boolean;
 };
 
+export type AdoptedEntityImageItem = {
+  assetId: string;
+  entityId: string;
+  entityName: string;
+  entityKind: 'character' | 'scene' | 'prop';
+  previewUrl: string;
+};
+
 export type ComposeContext = {
   assetId: string;
   assetType: 'image' | 'video';
@@ -285,12 +293,38 @@ export const api = {
       },
     );
   },
-  generateSegmentVideo(projectId: string, segmentId: string, model?: string) {
+  listAdoptedEntityImages(projectId: string) {
+    return apiFetch<{ items: AdoptedEntityImageItem[] }>(
+      `/short-video/projects/${projectId}/adopted-entity-images`,
+    );
+  },
+  updateSegmentPrompt(
+    projectId: string,
+    segmentId: string,
+    body: {
+      seedancePrompt: string;
+      referenceAssetIds: string[];
+      seedancePromptDoc: Record<string, unknown>;
+    },
+  ) {
+    return apiFetch<{ id: string }>(
+      `/short-video/projects/${projectId}/segments/${segmentId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      },
+    );
+  },
+  generateSegmentVideo(
+    projectId: string,
+    segmentId: string,
+    body: { prompt: string; model?: string; assetIds?: string[] },
+  ) {
     return apiFetch<GenerationTask>(
       `/short-video/projects/${projectId}/segments/${segmentId}/generate-video`,
       {
         method: 'POST',
-        body: JSON.stringify(model ? { model } : {}),
+        body: JSON.stringify(body),
       },
     );
   },

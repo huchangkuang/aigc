@@ -153,6 +153,63 @@ describe('short video api', () => {
       }),
     );
   });
+
+  it('calls adopted entity images and segment prompt endpoints', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({ code: 0, message: 'success', data: { items: [] } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await api.listAdoptedEntityImages('p1');
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/short-video/projects/p1/adopted-entity-images'),
+      expect.any(Object),
+    );
+
+    fetchMock.mockResolvedValueOnce({
+      json: async () => ({ code: 0, message: 'success', data: { id: 'seg1' } }),
+    });
+    await api.updateSegmentPrompt('p1', 'seg1', {
+      seedancePrompt: 'prompt',
+      referenceAssetIds: ['a1'],
+      seedancePromptDoc: { type: 'doc', content: [] },
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/short-video/projects/p1/segments/seg1'),
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({
+          seedancePrompt: 'prompt',
+          referenceAssetIds: ['a1'],
+          seedancePromptDoc: { type: 'doc', content: [] },
+        }),
+      }),
+    );
+
+    fetchMock.mockResolvedValueOnce({
+      json: async () => ({
+        code: 0,
+        message: 'success',
+        data: { id: 'task-1', type: 'video_seedance_r2v', status: 'pending', inputParams: {}, createdAt: 't' },
+      }),
+    });
+    await api.generateSegmentVideo('p1', 'seg1', {
+      prompt: 'user prompt',
+      model: '2.0',
+      assetIds: ['a1'],
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/short-video/projects/p1/segments/seg1/generate-video'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          prompt: 'user prompt',
+          model: '2.0',
+          assetIds: ['a1'],
+        }),
+      }),
+    );
+  });
 });
 
 describe('apiFetch error toast', () => {

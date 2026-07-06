@@ -2,47 +2,30 @@
 
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Icon } from '@/components/icon';
 import { SegmentCard } from '@/components/segment-card';
-import { api, type Asset } from '@/lib/api-client';
-import { isActiveTaskStatus } from '@/lib/generation-output';
+import { api, type AdoptedEntityImageItem, type Asset } from '@/lib/api-client';
 import type { ShortVideoProject } from '@/lib/short-video-types';
-import { flattenEntities } from '@/lib/short-video-types';
-import { useGenerationTaskPoll } from '@/lib/use-generation-task-poll';
-import { toast } from '@/stores/toast-store';
+import type { SegmentPromptDoc } from '@/lib/segment-prompt-doc';
 
 export default function EditPage() {
   const params = useParams<{ projectId: string }>();
   const projectId = params.projectId;
   const [project, setProject] = useState<ShortVideoProject | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [mentionItems, setMentionItems] = useState<AdoptedEntityImageItem[]>([]);
   const [parsing, setParsing] = useState(false);
-  const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   async function reload() {
-    const [projectData, assetList] = await Promise.all([
+    const [projectData, assetList, adopted] = await Promise.all([
       api.getShortVideoProject(projectId),
       api.listAssets(undefined, 'short_video'),
+      api.listAdoptedEntityImages(projectId),
     ]);
     setProject(projectData);
     setAssets(assetList);
+    setMentionItems(adopted.items);
   }
-
-  const segments = project?.segments?.segments ?? [];
-  const watchedTaskIds = segments.flatMap((segment) =>
-    segment.videoTaskId ? [segment.videoTaskId] : [],
-  );
-
-  const { isTaskActive } = useGenerationTaskPoll({
-    taskIds: watchedTaskIds,
-    onSettled: (tasks) => {
-      setSubmittingId(null);
-      if (tasks.some((task) => task.status === 'failed')) {
-        toast('生成失败，请重试', 'error');
-      }
-      reload().catch(() => undefined);
-    },
-  });
 
   useEffect(() => {
     reload().catch(() => undefined);
@@ -58,36 +41,58 @@ export default function EditPage() {
     }
   }
 
-  async function generate(segmentId: string, model: string) {
-    setSubmittingId(segmentId);
-    try {
-      const task = await api.generateSegmentVideo(projectId, segmentId, model);
-      const projectData = await api.getShortVideoProject(projectId);
-      setProject(projectData);
-      const active = await api.listActiveTasks({ silent: true });
-      if (!active.some((item) => item.id === task.id && isActiveTaskStatus(item.status))) {
-        await reload();
-        setSubmittingId(null);
-      }
-    } catch {
-      setSubmittingId(null);
-    }
+  async function savePrompt(
+    segmentId: string,
+    payload: {
+      seedancePrompt: string;
+      referenceAssetIds: string[];
+      seedancePromptDoc: SegmentPromptDoc;
+    },
+  ) {
+    await api.updateSegmentPrompt(projectId, segmentId, payload);
+    setProject((current) => {
+      if (!current?.segments) return current;
+      return {
+        ...current,
+        segments: {
+          segments: current.segments.segments.map((segment) =>
+            segment.id === segmentId
+              ? {
+                  ...segment,
+                  seedancePrompt: payload.seedancePrompt,
+                  referenceAssetIds: payload.referenceAssetIds,
+                  seedancePromptDoc: payload.seedancePromptDoc,
+                }
+              : segment,
+          ),
+        },
+      };
+    });
   }
 
-  function segmentMissingRefs(segment: NonNullable<ShortVideoProject['segments']>['segments'][0]) {
-    const entities = flattenEntities(project?.parsedEntities);
-    const refs = [
-      ...segment.characterRefIds,
-      ...(segment.sceneRefId ? [segment.sceneRefId] : []),
-      ...segment.propRefIds,
-    ];
-    return refs.some((id) => !entities.find((item) => item.id === id)?.assetId);
+  async function generate(
+    segmentId: string,
+    payload: { model: string; prompt: string; assetIds: string[] },
+  ) {
+    setBusyId(segmentId);
+    try {
+      await api.generateSegmentVideo(projectId, segmentId, {
+        prompt: payload.prompt,
+        model: payload.model,
+        assetIds: payload.assetIds,
+      });
+      await reload();
+    } finally {
+      setBusyId(null);
+    }
   }
 
   function previewForSegment(assetId?: string) {
     if (!assetId) return undefined;
     return assets.find((item) => item.id === assetId && item.type === 'video')?.previewUrl;
   }
+
+  const segments = project?.segments?.segments ?? [];
 
   return (
     <div className="space-y-md">
@@ -100,12 +105,8 @@ export default function EditPage() {
           type="button"
           disabled={parsing}
           onClick={parseSegments}
-          className="gradient-button inline-flex items-center gap-1.5 rounded-lg px-md py-sm text-sm font-bold text-on-primary disabled:opacity-50"
+          className="gradient-button rounded-lg px-md py-sm text-sm font-bold text-on-primary disabled:opacity-50"
         >
-          <Icon
-            name={parsing ? 'progress_activity' : 'movie'}
-            className={`text-base ${parsing ? 'animate-spin' : ''}`}
-          />
           {parsing ? '解析中…' : '解析分镜'}
         </button>
       </div>
@@ -118,12 +119,11 @@ export default function EditPage() {
               key={segment.id}
               segment={segment}
               index={index}
-              missingRefs={segmentMissingRefs(segment)}
-              generating={
-                submittingId === segment.id || isTaskActive(segment.videoTaskId)
-              }
+              mentionItems={mentionItems}
+              busy={busyId === segment.id}
               previewUrl={previewForSegment(segment.videoAssetId)}
-              onGenerate={(model) => generate(segment.id, model)}
+              onBlurSave={(payload) => savePrompt(segment.id, payload)}
+              onGenerate={(payload) => generate(segment.id, payload)}
             />
           ))}
         </div>
