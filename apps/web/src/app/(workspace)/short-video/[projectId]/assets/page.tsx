@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { EntityCard } from '@/components/entity-card';
-import { api, type Asset } from '@/lib/api-client';
+import { api, type EntityImageItem } from '@/lib/api-client';
 import type { ShortVideoProject } from '@/lib/short-video-types';
 import { flattenEntities } from '@/lib/short-video-types';
 
@@ -11,26 +11,35 @@ export default function ProjectAssetsPage() {
   const params = useParams<{ projectId: string }>();
   const projectId = params.projectId;
   const [project, setProject] = useState<ShortVideoProject | null>(null);
-  const [assets, setAssets] = useState<Asset[]>([]);
+  const [histories, setHistories] = useState<Record<string, EntityImageItem[]>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [adoptBusyId, setAdoptBusyId] = useState<string | null>(null);
+  const [uploadBusyId, setUploadBusyId] = useState<string | null>(null);
+
+  async function loadHistories(entities: ReturnType<typeof flattenEntities>) {
+    const entries = await Promise.all(
+      entities.map(async (entity) => {
+        const { items } = await api.listEntityImages(projectId, entity.id);
+        return [entity.id, items] as const;
+      }),
+    );
+    setHistories(Object.fromEntries(entries));
+  }
 
   async function reload() {
-    const [projectData, assetList] = await Promise.all([
-      api.getShortVideoProject(projectId),
-      api.listAssets('image', 'short_video'),
-    ]);
+    const projectData = await api.getShortVideoProject(projectId);
     setProject(projectData);
-    setAssets(assetList);
+    const entities = flattenEntities(projectData.parsedEntities);
+    if (entities.length) {
+      await loadHistories(entities);
+    } else {
+      setHistories({});
+    }
   }
 
   useEffect(() => {
     reload().catch(() => undefined);
   }, [projectId]);
-
-  function previewForEntity(assetId?: string) {
-    if (!assetId) return undefined;
-    return assets.find((item) => item.id === assetId)?.previewUrl;
-  }
 
   async function generate(entityId: string, prompt: string) {
     setBusyId(entityId);
@@ -39,6 +48,27 @@ export default function ProjectAssetsPage() {
       await reload();
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function adopt(entityId: string, assetId: string) {
+    setAdoptBusyId(entityId);
+    try {
+      await api.adoptEntityImage(projectId, entityId, assetId);
+      await reload();
+    } finally {
+      setAdoptBusyId(null);
+    }
+  }
+
+  async function upload(entityId: string, file: File) {
+    setUploadBusyId(entityId);
+    try {
+      const uploaded = await api.uploadReference(file);
+      await api.uploadEntityImage(projectId, entityId, uploaded.ossKey, file.type);
+      await reload();
+    } finally {
+      setUploadBusyId(null);
     }
   }
 
@@ -58,9 +88,13 @@ export default function ProjectAssetsPage() {
             <EntityCard
               key={entity.id}
               entity={entity}
-              previewUrl={previewForEntity(entity.assetId)}
+              historyItems={histories[entity.id] ?? []}
               busy={busyId === entity.id}
+              adoptBusy={adoptBusyId === entity.id}
+              uploadBusy={uploadBusyId === entity.id}
               onGenerate={(prompt) => generate(entity.id, prompt)}
+              onAdopt={(assetId) => adopt(entity.id, assetId)}
+              onUpload={(file) => upload(entity.id, file)}
             />
           ))}
         </div>

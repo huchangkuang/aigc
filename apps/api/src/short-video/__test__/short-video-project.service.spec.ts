@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { AssetService } from '../../asset/asset.service';
 import { DeepSeekService } from '../../deepseek/deepseek.service';
 import { GenerationTaskService } from '../../generation/generation-task.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -32,6 +33,9 @@ describe('ShortVideoProjectService', () => {
   const storage = {
     getSignedUrl: jest.fn(),
   };
+  const assetService = {
+    createFromPersisted: jest.fn(),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -43,6 +47,7 @@ describe('ShortVideoProjectService', () => {
         { provide: DeepSeekService, useValue: deepseek },
         { provide: GenerationTaskService, useValue: generation },
         { provide: StorageService, useValue: storage },
+        { provide: AssetService, useValue: assetService },
       ],
     }).compile();
 

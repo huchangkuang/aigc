@@ -28,3 +28,16 @@ export class GenerateSegmentVideoDto {
   @IsString()
   model?: string;
 }
+
+export class AdoptEntityImageDto {
+  @IsString()
+  assetId!: string;
+}
+
+export class UploadEntityImageDto {
+  @IsString()
+  ossKey!: string;
+
+  @IsString()
+  mimeType!: string;
+}

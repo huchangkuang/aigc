@@ -89,6 +89,47 @@ describe('short video api', () => {
       expect.any(Object),
     );
   });
+
+  it('calls entity image history endpoints', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({ code: 0, message: 'success', data: { items: [] } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await api.listEntityImages('p1', 'c1');
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/short-video/projects/p1/entities/c1/images'),
+      expect.any(Object),
+    );
+
+    fetchMock.mockResolvedValueOnce({
+      json: async () => ({ code: 0, message: 'success', data: { assetId: 'a1' } }),
+    });
+    await api.adoptEntityImage('p1', 'c1', 'a1');
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/short-video/projects/p1/entities/c1/adopt-image'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ assetId: 'a1' }),
+      }),
+    );
+
+    fetchMock.mockResolvedValueOnce({
+      json: async () => ({
+        code: 0,
+        message: 'success',
+        data: { id: 'a2', previewUrl: 'u', createdAt: 't', adopted: false },
+      }),
+    });
+    await api.uploadEntityImage('p1', 'c1', 'temp/k.png', 'image/png');
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/short-video/projects/p1/entities/c1/upload-image'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ ossKey: 'temp/k.png', mimeType: 'image/png' }),
+      }),
+    );
+  });
 });
 
 describe('apiFetch error toast', () => {

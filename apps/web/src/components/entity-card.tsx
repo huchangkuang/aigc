@@ -1,37 +1,67 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Icon } from '@/components/icon';
+import { EntityImageHistory } from '@/components/entity-image-history';
+import { EntityImagePreview } from '@/components/entity-image-preview';
+import type { EntityImageItem } from '@/lib/api-client';
 import { ENTITY_KIND_LABEL, type ParsedEntity } from '@/lib/short-video-types';
 
 type EntityCardProps = {
   entity: ParsedEntity;
-  previewUrl?: string;
+  historyItems: EntityImageItem[];
   busy?: boolean;
+  adoptBusy?: boolean;
+  uploadBusy?: boolean;
   onGenerate: (prompt: string) => void;
+  onAdopt: (assetId: string) => void;
+  onUpload: (file: File) => void;
 };
 
-export function EntityCard({ entity, previewUrl, busy, onGenerate }: EntityCardProps) {
+export function EntityCard({
+  entity,
+  historyItems,
+  busy,
+  adoptBusy,
+  uploadBusy,
+  onGenerate,
+  onAdopt,
+  onUpload,
+}: EntityCardProps) {
   const [prompt, setPrompt] = useState(entity.imagePrompt);
+  const [previewAssetId, setPreviewAssetId] = useState<string | undefined>(
+    entity.assetId ?? historyItems[0]?.id,
+  );
+
+  useEffect(() => {
+    if (previewAssetId && historyItems.some((item) => item.id === previewAssetId)) {
+      return;
+    }
+    setPreviewAssetId(entity.assetId ?? historyItems[0]?.id);
+  }, [entity.assetId, historyItems, previewAssetId]);
+
+  const previewItem = historyItems.find((item) => item.id === previewAssetId);
+  const adopted = Boolean(previewAssetId && previewAssetId === entity.assetId);
 
   return (
     <article className="glass-panel overflow-hidden rounded-xl">
       <div className="flex flex-col gap-md p-md lg:flex-row">
-        <div className="relative mx-auto aspect-square w-full max-w-[11rem] shrink-0 overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-container-high lg:mx-0">
-          {previewUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={previewUrl} alt={entity.name} className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-on-surface-variant">
-              <Icon name="image" className="text-4xl opacity-50" />
-              <span className="text-label-sm">暂无参考图</span>
-            </div>
-          )}
-          {entity.assetId ? (
-            <span className="absolute right-2 top-2 rounded-full bg-primary/90 px-2 py-0.5 text-[10px] font-medium text-on-primary">
-              已生成
-            </span>
-          ) : null}
+        <div className="mx-auto flex shrink-0 flex-col gap-sm lg:mx-0">
+          <EntityImagePreview
+            previewUrl={previewItem?.previewUrl}
+            alt={entity.name}
+            adopted={adopted}
+            showAdopt={Boolean(previewAssetId && !adopted)}
+            adoptBusy={adoptBusy}
+            onAdopt={() => previewAssetId && onAdopt(previewAssetId)}
+          />
+          <EntityImageHistory
+            items={historyItems}
+            previewAssetId={previewAssetId}
+            uploadBusy={uploadBusy}
+            onSelect={setPreviewAssetId}
+            onUpload={onUpload}
+          />
         </div>
 
         <div className="min-w-0 flex-1 space-y-sm">
@@ -71,7 +101,7 @@ export function EntityCard({ entity, previewUrl, busy, onGenerate }: EntityCardP
               className="gradient-button inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-md py-sm text-sm font-bold text-on-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Icon name="auto_awesome" className="text-base" />
-              {busy ? '生成中…' : entity.assetId ? '重新生成' : '生成参考图'}
+              {busy ? '生成中…' : historyItems.length ? '重新生成' : '生成参考图'}
             </button>
           </div>
         </div>

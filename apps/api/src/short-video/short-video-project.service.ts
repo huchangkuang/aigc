@@ -3,7 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { AssetSource, AssetType, Prisma } from '@prisma/client';
+import { AssetService } from '../asset/asset.service';
 import { DeepSeekService } from '../deepseek/deepseek.service';
 import { CreateGenerationTaskDto } from '../generation/dto/create-generation-task.dto';
 import { GenerationTaskService } from '../generation/generation-task.service';
@@ -34,6 +35,7 @@ export class ShortVideoProjectService {
     private readonly generation: GenerationTaskService,
     private readonly storage: StorageService,
     private readonly linker: ShortVideoTaskLinkerService,
+    private readonly assets: AssetService,
   ) {}
 
   listForUser(userId: string) {
@@ -179,6 +181,127 @@ export class ShortVideoProjectService {
     });
 
     return task;
+  }
+
+  private entityAssetMatches(
+    metadata: Prisma.JsonValue,
+    projectId: string,
+    entityId: string,
+  ) {
+    if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+      return false;
+    }
+    const record = metadata as Record<string, unknown>;
+    return (
+      record.shortVideoProjectId === projectId &&
+      record.shortVideoEntityId === entityId
+    );
+  }
+
+  async listEntityImages(userId: string, projectId: string, entityId: string) {
+    const project = await this.getForUser(userId, projectId);
+    const entities = project.parsedEntities as ParsedEntities | null;
+    const entity = findEntity(entities, entityId);
+    if (!entity) {
+      throw new NotFoundException('Entity not found');
+    }
+
+    const assets = await this.prisma.asset.findMany({
+      where: {
+        userId,
+        source: AssetSource.short_video,
+        type: AssetType.image,
+        deletedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const matched = assets.filter((asset) =>
+      this.entityAssetMatches(asset.metadata, projectId, entityId),
+    );
+
+    const items = await Promise.all(
+      matched.map(async (asset) => ({
+        id: asset.id,
+        previewUrl: await this.storage.getSignedUrl(asset.ossKey),
+        createdAt: asset.createdAt.toISOString(),
+        adopted: asset.id === entity.assetId,
+      })),
+    );
+
+    return { items };
+  }
+
+  async adoptEntityImage(
+    userId: string,
+    projectId: string,
+    entityId: string,
+    assetId: string,
+  ) {
+    const project = await this.getForUser(userId, projectId);
+    const entities = project.parsedEntities as ParsedEntities | null;
+    const entity = findEntity(entities, entityId);
+    if (!entity) {
+      throw new NotFoundException('Entity not found');
+    }
+
+    const asset = await this.prisma.asset.findFirst({
+      where: {
+        id: assetId,
+        userId,
+        deletedAt: null,
+        source: AssetSource.short_video,
+        type: AssetType.image,
+      },
+    });
+    if (!asset || !this.entityAssetMatches(asset.metadata, projectId, entityId)) {
+      throw new BadRequestException('Asset not valid for this entity');
+    }
+
+    const updated = updateEntityInParsed(entities!, entityId, { assetId });
+    await this.prisma.shortVideoProject.update({
+      where: { id: projectId },
+      data: { parsedEntities: updated as unknown as Prisma.InputJsonValue },
+    });
+
+    return { assetId };
+  }
+
+  async uploadEntityImage(
+    userId: string,
+    projectId: string,
+    entityId: string,
+    ossKey: string,
+    mimeType: string,
+  ) {
+    const project = await this.getForUser(userId, projectId);
+    const entities = project.parsedEntities as ParsedEntities | null;
+    const entity = findEntity(entities, entityId);
+    if (!entity) {
+      throw new NotFoundException('Entity not found');
+    }
+
+    const asset = await this.assets.createFromPersisted({
+      userId,
+      type: AssetType.image,
+      source: AssetSource.short_video,
+      ossKey,
+      mimeType,
+      metadata: {
+        shortVideoProjectId: projectId,
+        shortVideoEntityId: entityId,
+        entityKind: entity.kind,
+        entityName: entity.name,
+        uploaded: true,
+      },
+    });
+
+    return {
+      id: asset.id,
+      previewUrl: await this.storage.getSignedUrl(asset.ossKey),
+      createdAt: asset.createdAt.toISOString(),
+      adopted: asset.id === entity.assetId,
+    };
   }
 
   async generateSegmentVideo(

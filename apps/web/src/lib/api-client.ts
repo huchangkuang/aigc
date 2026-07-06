@@ -64,6 +64,13 @@ export type GenerationModelOption = {
   label: string;
 };
 
+export type EntityImageItem = {
+  id: string;
+  previewUrl: string;
+  createdAt: string;
+  adopted: boolean;
+};
+
 export type ComposeContext = {
   assetId: string;
   assetType: 'image' | 'video';
@@ -244,6 +251,34 @@ export const api = {
       {
         method: 'POST',
         body: JSON.stringify(prompt ? { prompt } : {}),
+      },
+    );
+  },
+  listEntityImages(projectId: string, entityId: string) {
+    return apiFetch<{ items: EntityImageItem[] }>(
+      `/short-video/projects/${projectId}/entities/${entityId}/images`,
+    );
+  },
+  adoptEntityImage(projectId: string, entityId: string, assetId: string) {
+    return apiFetch<{ assetId: string }>(
+      `/short-video/projects/${projectId}/entities/${entityId}/adopt-image`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ assetId }),
+      },
+    );
+  },
+  uploadEntityImage(
+    projectId: string,
+    entityId: string,
+    ossKey: string,
+    mimeType: string,
+  ) {
+    return apiFetch<EntityImageItem>(
+      `/short-video/projects/${projectId}/entities/${entityId}/upload-image`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ ossKey, mimeType }),
       },
     );
   },

@@ -11,8 +11,10 @@ import {
 import type { Request } from 'express';
 import {
   CreateShortVideoProjectDto,
+  AdoptEntityImageDto,
   GenerateEntityImageDto,
   GenerateSegmentVideoDto,
+  UploadEntityImageDto,
   UpdateShortVideoProjectDto,
 } from './dto/short-video.dto';
 import { ShortVideoProjectService } from './short-video-project.service';
@@ -74,6 +76,46 @@ export class ShortVideoController {
       id,
       entityId,
       dto.prompt,
+    );
+  }
+
+  @Get(':id/entities/:entityId/images')
+  listEntityImages(
+    @Req() req: AuthRequest,
+    @Param('id') id: string,
+    @Param('entityId') entityId: string,
+  ) {
+    return this.projects.listEntityImages(req.user.id, id, entityId);
+  }
+
+  @Post(':id/entities/:entityId/adopt-image')
+  adoptEntityImage(
+    @Req() req: AuthRequest,
+    @Param('id') id: string,
+    @Param('entityId') entityId: string,
+    @Body() dto: AdoptEntityImageDto,
+  ) {
+    return this.projects.adoptEntityImage(
+      req.user.id,
+      id,
+      entityId,
+      dto.assetId,
+    );
+  }
+
+  @Post(':id/entities/:entityId/upload-image')
+  uploadEntityImage(
+    @Req() req: AuthRequest,
+    @Param('id') id: string,
+    @Param('entityId') entityId: string,
+    @Body() dto: UploadEntityImageDto,
+  ) {
+    return this.projects.uploadEntityImage(
+      req.user.id,
+      id,
+      entityId,
+      dto.ossKey,
+      dto.mimeType,
     );
   }
 

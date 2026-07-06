@@ -4,7 +4,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import {
   findEntity,
   findSegment,
-  updateEntityInParsed,
   updateSegmentInData,
 } from './entity-merge';
 import type {
@@ -77,16 +76,7 @@ export class ShortVideoTaskLinkerService {
     if (!project) return;
 
     if (ctx.entityId && assetType === AssetType.image) {
-      const entities = project.parsedEntities as ParsedEntities | null;
-      if (!entities) return;
-      const updated = updateEntityInParsed(entities, ctx.entityId, {
-        assetId,
-        imageTaskId: taskId,
-      });
-      await this.prisma.shortVideoProject.update({
-        where: { id: ctx.projectId },
-        data: { parsedEntities: updated as unknown as Prisma.InputJsonValue },
-      });
+      // ponytail: image assets are linked via metadata; entity.assetId is set only on manual adopt
       return;
     }
 
