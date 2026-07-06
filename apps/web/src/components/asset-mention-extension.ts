@@ -53,7 +53,7 @@ export const AssetMention = Node.create({
       (this.options as { mentionItems: AdoptedEntityImageItem[] }).mentionItems;
 
     return [
-      Suggestion<AdoptedEntityImageItem, AssetMentionAttrs>({
+      Suggestion<AdoptedEntityImageItem>({
         editor: this.editor,
         char: '@',
         pluginKey: assetMentionPluginKey,
@@ -78,8 +78,7 @@ export const AssetMention = Node.create({
         render: () => {
           let listHost: HTMLDivElement | null = null;
           let selectedIndex = 0;
-          let currentProps: SuggestionProps<AdoptedEntityImageItem, AssetMentionAttrs> | null =
-            null;
+          let currentProps: SuggestionProps<AdoptedEntityImageItem> | null = null;
 
           const updateSelection = () => {
             if (!listHost || !currentProps) return;
