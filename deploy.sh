@@ -45,8 +45,13 @@ pnpm install --frozen-lockfile
 log "应用数据库迁移..."
 pnpm --filter @aigc/api prisma:migrate:deploy
 
-log "构建前后端..."
-pnpm build
+log "构建 API..."
+pnpm build:api
+
+log "构建 Web..."
+# ponytail: 顺序构建 + Webpack，降低小内存 VPS 上 Turbopack OOM 概率；仍 Killed 请加 swap
+export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=1536"
+pnpm build:web
 
 log "重启 pm2 进程..."
 if pm2 describe aigc-api >/dev/null 2>&1; then
