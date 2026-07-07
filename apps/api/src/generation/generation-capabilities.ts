@@ -6,6 +6,26 @@ export type ModelOption = {
   reqKey: string;
 };
 
+export type SeedanceContentMode = 't2v' | 'i2v_first' | 'i2v_first_tail' | 'r2v';
+
+const SEEDANCE_MODEL_OPTIONS: ModelOption[] = [
+  {
+    id: '2.0',
+    label: 'Seedance 2.0',
+    reqKey: 'doubao-seedance-2-0-260128',
+  },
+  {
+    id: '2.0-fast',
+    label: 'Seedance 2.0 Fast',
+    reqKey: 'doubao-seedance-2-0-fast-260128',
+  },
+  {
+    id: '2.0-mini',
+    label: 'Seedance 2.0 Mini',
+    reqKey: 'doubao-seedance-2-0-mini-260615',
+  },
+];
+
 export const MODEL_OPTIONS: Record<GenerationType, ModelOption[]> = {
   image: [
     { id: 'seedream46', label: 'Seedream 4.6', reqKey: 'jimeng_seedream46_cvtob' },
@@ -29,23 +49,10 @@ export const MODEL_OPTIONS: Record<GenerationType, ModelOption[]> = {
   video_i2v_recamera: [
     { id: '720', label: '720P', reqKey: 'jimeng_i2v_recamera_v30' },
   ],
-  video_seedance_r2v: [
-    {
-      id: '2.0',
-      label: 'Seedance 2.0',
-      reqKey: 'doubao-seedance-2-0-260128',
-    },
-    {
-      id: '2.0-fast',
-      label: 'Seedance 2.0 Fast',
-      reqKey: 'doubao-seedance-2-0-fast-260128',
-    },
-    {
-      id: '2.0-mini',
-      label: 'Seedance 2.0 Mini',
-      reqKey: 'doubao-seedance-2-0-mini-260615',
-    },
-  ],
+  video_seedance_t2v: SEEDANCE_MODEL_OPTIONS,
+  video_seedance_i2v_first: SEEDANCE_MODEL_OPTIONS,
+  video_seedance_i2v_first_tail: SEEDANCE_MODEL_OPTIONS,
+  video_seedance_r2v: SEEDANCE_MODEL_OPTIONS,
 };
 
 export const DEFAULT_SEEDANCE_RESOLUTION = '720p';
@@ -71,6 +78,32 @@ const ARK_REQ_KEY_PREFIX = 'doubao-seedance-';
 
 export function isArkVideoReqKey(reqKey: string): boolean {
   return reqKey.startsWith(ARK_REQ_KEY_PREFIX);
+}
+
+export function isSeedanceGenerationType(type: GenerationType): boolean {
+  return (
+    type === 'video_seedance_t2v' ||
+    type === 'video_seedance_i2v_first' ||
+    type === 'video_seedance_i2v_first_tail' ||
+    type === 'video_seedance_r2v'
+  );
+}
+
+export function seedanceContentMode(
+  type: GenerationType,
+): SeedanceContentMode | null {
+  switch (type) {
+    case 'video_seedance_t2v':
+      return 't2v';
+    case 'video_seedance_i2v_first':
+      return 'i2v_first';
+    case 'video_seedance_i2v_first_tail':
+      return 'i2v_first_tail';
+    case 'video_seedance_r2v':
+      return 'r2v';
+    default:
+      return null;
+  }
 }
 
 const GENERATION_TYPES = new Set<string>(Object.keys(MODEL_OPTIONS));

@@ -70,7 +70,7 @@ describe('GenerationComposer model tier', () => {
     render(
       <GenerationComposer
         {...baseProps}
-        type="video_seedance_r2v"
+        type="video_seedance_t2v"
         model="2.0"
         resolution="720p"
       />,
@@ -80,6 +80,15 @@ describe('GenerationComposer model tier', () => {
       expect(screen.getByRole('option', { name: '1080P' })).toBeInTheDocument();
       expect(screen.getByRole('option', { name: '4K' })).toBeInTheDocument();
     });
+  });
+
+  it('shows first-frame upload for seedance i2v first', () => {
+    render(
+      <GenerationComposer {...baseProps} type="video_seedance_i2v_first" model="2.0" />,
+    );
+
+    expect(screen.getByText('上传首帧')).toBeInTheDocument();
+    expect(screen.queryByText('参考视频')).not.toBeInTheDocument();
   });
 
   it('limits resolution options for seedance fast model', async () => {

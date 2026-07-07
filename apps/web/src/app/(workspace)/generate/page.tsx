@@ -13,6 +13,7 @@ import { hasActiveTasks, resolveSessionSubmitMessage, GENERATION_SUBMIT_MESSAGE 
 import { mergeTasksWithStableUrls } from '@/lib/merge-tasks-stable-urls';
 import { consumeComposerDraft } from '@/stores/composer-draft-store';
 import { toast } from '@/stores/toast-store';
+import { isSeedanceGenerationType } from '@/lib/seedance-types';
 
 const MAX_REFERENCE_IMAGES = 14;
 const MAX_REFERENCE_VIDEOS = 3;
@@ -404,7 +405,7 @@ export default function GeneratePage() {
       if (model) body.model = model;
 
       if (type !== 'image') {
-        if (type === 'video_seedance_r2v') {
+        if (isSeedanceGenerationType(type)) {
           body.duration = duration;
           body.resolution = resolution;
           body.generate_audio = true;
@@ -414,7 +415,7 @@ export default function GeneratePage() {
         }
       }
 
-      if (type === 'video_t2v' || type === 'video_seedance_r2v') {
+      if (type === 'video_t2v' || isSeedanceGenerationType(type)) {
         body.aspect_ratio = aspectRatio;
       }
 
@@ -451,7 +452,7 @@ export default function GeneratePage() {
         <div>
           <h2 className="text-headline-lg text-on-surface">创作中心</h2>
           <p className="mt-1 text-on-surface-variant">
-            即梦生图/视频 + 火山方舟 Seedance 2.0 多模态视频
+            即梦生图/视频 + 火山方舟 Seedance 2.0 视频（文生/图生/多模态）
           </p>
         </div>
         <div className="flex items-center gap-sm">

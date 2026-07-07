@@ -8,6 +8,12 @@ import {
   DEFAULT_SEEDANCE_RESOLUTION,
   listSeedanceResolutionOptions,
 } from '@/lib/seedance-resolutions';
+import {
+  isSeedanceGenerationType,
+  maxSeedanceReferenceImages,
+  seedanceImageUploadHint,
+  seedanceImageUploadLabel,
+} from '@/lib/seedance-types';
 
 const GENERATION_TYPES = [
   { value: 'image', label: '文生图', icon: 'image' },
@@ -15,6 +21,13 @@ const GENERATION_TYPES = [
   { value: 'video_i2v_first', label: '图生视频·首帧', icon: 'photo_camera' },
   { value: 'video_i2v_first_tail', label: '图生视频·首尾帧', icon: 'flip' },
   { value: 'video_i2v_recamera', label: '图生视频·运镜', icon: '360' },
+  { value: 'video_seedance_t2v', label: 'Seedance 文生视频', icon: 'videocam' },
+  { value: 'video_seedance_i2v_first', label: 'Seedance 图生·首帧', icon: 'photo_camera' },
+  {
+    value: 'video_seedance_i2v_first_tail',
+    label: 'Seedance 图生·首尾帧',
+    icon: 'flip',
+  },
   { value: 'video_seedance_r2v', label: 'Seedance 多模态', icon: 'movie' },
 ] as const;
 
@@ -227,8 +240,13 @@ export function GenerationComposer({
 }: GenerationComposerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [modelOptions, setModelOptions] = useState<GenerationModelOption[]>([]);
-  const needsImages = type.includes('i2v') || type === 'image' || type === 'video_seedance_r2v';
-  const isSeedance = type === 'video_seedance_r2v';
+  const needsImages =
+    type.includes('i2v') || type === 'image' || type === 'video_seedance_r2v';
+  const isSeedance = isSeedanceGenerationType(type);
+  const isSeedanceR2v = type === 'video_seedance_r2v';
+  const maxReferenceImages = isSeedance
+    ? maxSeedanceReferenceImages(type)
+    : MAX_REFERENCE_IMAGES;
   const selectedType = GENERATION_TYPES.find((item) => item.value === type);
   const uploadingCount =
     references.filter((item) => item.uploading).length +
@@ -285,11 +303,13 @@ export function GenerationComposer({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={references.length >= MAX_REFERENCE_IMAGES || uploadingCount > 0}
+              disabled={references.length >= maxReferenceImages || uploadingCount > 0}
               className="flex h-20 w-20 shrink-0 flex-col items-center justify-center rounded-lg border border-dashed border-outline-variant/60 bg-surface-container-low text-on-surface-variant transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-50"
             >
               <Icon name="add" className="text-xl" />
-              <span className="mt-1 text-[10px] leading-tight">上传参考图</span>
+              <span className="mt-1 text-[10px] leading-tight">
+                {isSeedance ? seedanceImageUploadLabel(type) : '上传参考图'}
+              </span>
             </button>
             <input
               ref={fileInputRef}
@@ -337,16 +357,18 @@ export function GenerationComposer({
           </div>
           <div className="mt-xs flex items-center justify-between">
             <p className="text-[11px] text-on-surface-variant">
-              {isSeedance ? '参考图可选，上传后自动获得可访问 URL' : '支持 JPG、PNG、WEBP，最大 10MB'}
+              {isSeedance
+                ? seedanceImageUploadHint(type)
+                : '支持 JPG、PNG、WEBP，最大 10MB'}
             </p>
             <span className="text-[11px] text-on-surface-variant">
-              {references.filter((item) => !item.uploading).length} / {MAX_REFERENCE_IMAGES}
+              {references.filter((item) => !item.uploading).length} / {maxReferenceImages}
             </span>
           </div>
         </div>
       ) : null}
 
-      {isSeedance ? (
+      {isSeedanceR2v ? (
         <div className="mb-md grid gap-md md:grid-cols-2">
           <ReferenceUploadStrip
             label="参考视频"

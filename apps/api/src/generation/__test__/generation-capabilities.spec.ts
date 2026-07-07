@@ -1,10 +1,12 @@
 import { GenerationType } from '@prisma/client';
 import {
+  isSeedanceGenerationType,
   isValidSeedanceResolution,
   listModelsForType,
   listSeedanceResolutions,
   resolveModelId,
   resolveReqKey,
+  seedanceContentMode,
 } from '../generation-capabilities';
 
 describe('generation-capabilities', () => {
@@ -55,6 +57,9 @@ describe('generation-capabilities', () => {
       'video_i2v_first',
       'video_i2v_first_tail',
       'video_i2v_recamera',
+      'video_seedance_t2v',
+      'video_seedance_i2v_first',
+      'video_seedance_i2v_first_tail',
       'video_seedance_r2v',
     ];
     for (const type of types) {
@@ -90,5 +95,15 @@ describe('generation-capabilities', () => {
     expect(listSeedanceResolutions('2.0-fast')).toEqual(['480p', '720p']);
     expect(isValidSeedanceResolution('2.0', '4k')).toBe(true);
     expect(isValidSeedanceResolution('2.0-fast', '1080p')).toBe(false);
+  });
+
+  it('maps seedance generation types to content modes', () => {
+    expect(isSeedanceGenerationType('video_seedance_t2v')).toBe(true);
+    expect(isSeedanceGenerationType('video_t2v')).toBe(false);
+    expect(seedanceContentMode('video_seedance_i2v_first')).toBe('i2v_first');
+    expect(seedanceContentMode('video_seedance_i2v_first_tail')).toBe(
+      'i2v_first_tail',
+    );
+    expect(seedanceContentMode('video_seedance_t2v')).toBe('t2v');
   });
 });

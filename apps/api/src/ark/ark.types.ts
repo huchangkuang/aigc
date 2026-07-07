@@ -3,7 +3,7 @@ export type ArkContentItem =
   | {
       type: 'image_url';
       image_url: { url: string };
-      role: 'reference_image';
+      role: 'reference_image' | 'first_frame' | 'last_frame';
     }
   | {
       type: 'video_url';

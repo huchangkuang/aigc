@@ -5,6 +5,7 @@ describe('ark-payload', () => {
     expect(
       buildArkContent({
         prompt: '果茶广告',
+        mode: 'r2v',
         image_urls: ['https://example.com/a.jpg', 'https://example.com/b.jpg'],
         video_urls: ['https://example.com/v.mp4'],
         audio_urls: ['https://example.com/a.mp3'],
@@ -34,10 +35,62 @@ describe('ark-payload', () => {
     ]);
   });
 
+  it('builds first-frame content', () => {
+    expect(
+      buildArkContent({
+        prompt: '镜头推近',
+        mode: 'i2v_first',
+        image_urls: ['https://example.com/first.jpg'],
+      }),
+    ).toEqual([
+      { type: 'text', text: '镜头推近' },
+      {
+        type: 'image_url',
+        image_url: { url: 'https://example.com/first.jpg' },
+        role: 'first_frame',
+      },
+    ]);
+  });
+
+  it('builds first-tail content', () => {
+    expect(
+      buildArkContent({
+        prompt: '环绕运镜',
+        mode: 'i2v_first_tail',
+        image_urls: [
+          'https://example.com/first.jpg',
+          'https://example.com/last.jpg',
+        ],
+      }),
+    ).toEqual([
+      { type: 'text', text: '环绕运镜' },
+      {
+        type: 'image_url',
+        image_url: { url: 'https://example.com/first.jpg' },
+        role: 'first_frame',
+      },
+      {
+        type: 'image_url',
+        image_url: { url: 'https://example.com/last.jpg' },
+        role: 'last_frame',
+      },
+    ]);
+  });
+
+  it('builds text-only content for t2v', () => {
+    expect(
+      buildArkContent({
+        prompt: '雏菊特写',
+        mode: 't2v',
+      }),
+    ).toEqual([{ type: 'text', text: '雏菊特写' }]);
+  });
+
   it('builds create body with defaults', () => {
     expect(
       buildArkCreateBody('doubao-seedance-2-0-260128', {
         prompt: 'hello',
+        mode: 't2v',
       }),
     ).toEqual({
       model: 'doubao-seedance-2-0-260128',

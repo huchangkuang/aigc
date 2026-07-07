@@ -231,4 +231,74 @@ describe('GenerationTaskService', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('creates seedance t2v with text-only ark payload', async () => {
+    prisma.generationTask.create.mockResolvedValue({
+      id: 't5',
+      reqKey: 'doubao-seedance-2-0-mini-260615',
+    });
+    ark.createTask.mockResolvedValue({ id: 'cgt-5' });
+    prisma.generationTask.update.mockResolvedValue({
+      id: 't5',
+      status: GenerationStatus.processing,
+    });
+
+    await service.create('u1', {
+      type: 'video_seedance_t2v',
+      model: '2.0-mini',
+      prompt: '雏菊特写',
+      duration: 5,
+      resolution: '480p',
+    });
+
+    expect(ark.createTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: [{ type: 'text', text: '雏菊特写' }],
+        resolution: '480p',
+      }),
+    );
+  });
+
+  it('creates seedance first-frame task with first_frame role', async () => {
+    prisma.generationTask.create.mockResolvedValue({
+      id: 't6',
+      reqKey: 'doubao-seedance-2-0-260128',
+    });
+    ark.createTask.mockResolvedValue({ id: 'cgt-6' });
+    prisma.generationTask.update.mockResolvedValue({
+      id: 't6',
+      status: GenerationStatus.processing,
+    });
+
+    await service.create('u1', {
+      type: 'video_seedance_i2v_first',
+      model: '2.0',
+      prompt: '推镜头',
+      image_urls: ['https://example.com/first.jpg'],
+    });
+
+    expect(ark.createTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: [
+          { type: 'text', text: '推镜头' },
+          {
+            type: 'image_url',
+            image_url: { url: 'https://example.com/first.jpg' },
+            role: 'first_frame',
+          },
+        ],
+      }),
+    );
+  });
+
+  it('rejects seedance first-frame without exactly one image', async () => {
+    await expect(
+      service.create('u1', {
+        type: 'video_seedance_i2v_first',
+        model: '2.0',
+        prompt: 'test',
+        image_urls: [],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
 });

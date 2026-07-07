@@ -11,9 +11,11 @@ import { buildArkCreateBody } from './ark-payload';
 import { CreateGenerationTaskDto } from './dto/create-generation-task.dto';
 import {
   isArkVideoReqKey,
+  isSeedanceGenerationType,
   isValidSeedanceResolution,
   resolveModelId,
   resolveReqKey,
+  seedanceContentMode,
 } from './generation-capabilities';
 
 @Injectable()
@@ -49,7 +51,7 @@ export class GenerationTaskService {
 
     try {
       const externalTaskId = isArkVideoReqKey(reqKey)
-        ? await this.submitArkTask(reqKey, inputParams)
+        ? await this.submitArkTask(reqKey, dto.type, inputParams)
         : await this.submitJimengTask(reqKey, inputParams);
 
       return this.prisma.generationTask.update({
@@ -172,10 +174,13 @@ export class GenerationTaskService {
 
   private async submitArkTask(
     reqKey: string,
+    type: GenerationType,
     inputParams: Prisma.JsonObject,
   ): Promise<string> {
+    const mode = seedanceContentMode(type) ?? undefined;
     const body = buildArkCreateBody(reqKey, {
       prompt: String(inputParams.prompt ?? ''),
+      mode,
       image_urls: this.readStringArray(inputParams.image_urls),
       video_urls: this.readStringArray(inputParams.video_urls),
       audio_urls: this.readStringArray(inputParams.audio_urls),
@@ -241,7 +246,7 @@ export class GenerationTaskService {
       throw new BadRequestException('first_tail requires exactly 2 images');
     }
 
-    if (dto.type === GenerationType.video_seedance_r2v) {
+    if (isSeedanceGenerationType(dto.type)) {
       if (!this.ark.isConfigured()) {
         throw new BadRequestException('Seedance API is not configured');
       }
@@ -253,6 +258,18 @@ export class GenerationTaskService {
         !isValidSeedanceResolution(dto.model, dto.resolution)
       ) {
         throw new BadRequestException('Invalid resolution for Seedance model');
+      }
+      if (
+        dto.type === GenerationType.video_seedance_i2v_first &&
+        dto.image_urls?.length !== 1
+      ) {
+        throw new BadRequestException('first frame requires exactly 1 image');
+      }
+      if (
+        dto.type === GenerationType.video_seedance_i2v_first_tail &&
+        dto.image_urls?.length !== 2
+      ) {
+        throw new BadRequestException('first_tail requires exactly 2 images');
       }
     }
   }
