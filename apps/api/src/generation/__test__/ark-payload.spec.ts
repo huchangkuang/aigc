@@ -45,7 +45,17 @@ describe('ark-payload', () => {
       generate_audio: true,
       ratio: '16:9',
       duration: 5,
+      resolution: '720p',
       watermark: false,
     });
+  });
+
+  it('passes explicit resolution', () => {
+    expect(
+      buildArkCreateBody('doubao-seedance-2-0-260128', {
+        prompt: 'hello',
+        resolution: '1080p',
+      }),
+    ).toMatchObject({ resolution: '1080p' });
   });
 });

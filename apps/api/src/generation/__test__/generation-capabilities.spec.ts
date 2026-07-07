@@ -1,6 +1,8 @@
 import { GenerationType } from '@prisma/client';
 import {
+  isValidSeedanceResolution,
   listModelsForType,
+  listSeedanceResolutions,
   resolveModelId,
   resolveReqKey,
 } from '../generation-capabilities';
@@ -76,5 +78,17 @@ describe('generation-capabilities', () => {
     expect(resolveReqKey('video_seedance_r2v', '2.0-mini')).toBe(
       'doubao-seedance-2-0-mini-260615',
     );
+  });
+
+  it('lists seedance resolutions per model tier', () => {
+    expect(listSeedanceResolutions('2.0')).toEqual([
+      '480p',
+      '720p',
+      '1080p',
+      '4k',
+    ]);
+    expect(listSeedanceResolutions('2.0-fast')).toEqual(['480p', '720p']);
+    expect(isValidSeedanceResolution('2.0', '4k')).toBe(true);
+    expect(isValidSeedanceResolution('2.0-fast', '1080p')).toBe(false);
   });
 });

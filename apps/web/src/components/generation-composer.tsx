@@ -4,6 +4,10 @@ import { FormEvent, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from '@/components/icon';
 import { MediaPreview } from '@/components/media-preview';
 import { api, type GenerationModelOption } from '@/lib/api-client';
+import {
+  DEFAULT_SEEDANCE_RESOLUTION,
+  listSeedanceResolutionOptions,
+} from '@/lib/seedance-resolutions';
 
 const GENERATION_TYPES = [
   { value: 'image', label: '文生图', icon: 'image' },
@@ -150,6 +154,8 @@ type GenerationComposerProps = {
   onUploadAudioFile: (file: File) => void;
   duration: number;
   onDurationChange: (value: number) => void;
+  resolution: string;
+  onResolutionChange: (value: string) => void;
   loading: boolean;
   message: string;
   onUploadFile: (file: File) => void;
@@ -212,6 +218,8 @@ export function GenerationComposer({
   onUploadAudioFile,
   duration,
   onDurationChange,
+  resolution,
+  onResolutionChange,
   loading,
   message,
   onUploadFile,
@@ -244,6 +252,16 @@ export function GenerationComposer({
       cancelled = true;
     };
   }, [type]);
+
+  useEffect(() => {
+    if (!isSeedance) return;
+    const allowed = listSeedanceResolutionOptions(model || '2.0').map(
+      (item) => item.value,
+    );
+    if (!allowed.includes(resolution)) {
+      onResolutionChange(DEFAULT_SEEDANCE_RESOLUTION);
+    }
+  }, [model, isSeedance]);
 
   return (
     <form onSubmit={onSubmit} className="glass-panel rounded-xl p-md">
@@ -393,17 +411,30 @@ export function GenerationComposer({
         ) : null}
 
         {isSeedance ? (
-          <PillSelect
-            icon="schedule"
-            value={String(duration)}
-            onChange={(v) => onDurationChange(Number(v))}
-          >
-            {[5, 8, 11, 15].map((seconds) => (
-              <option key={seconds} value={String(seconds)}>
-                {seconds} 秒
-              </option>
-            ))}
-          </PillSelect>
+          <>
+            <PillSelect
+              icon="hd"
+              value={resolution}
+              onChange={onResolutionChange}
+            >
+              {listSeedanceResolutionOptions(model || '2.0').map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </PillSelect>
+            <PillSelect
+              icon="schedule"
+              value={String(duration)}
+              onChange={(v) => onDurationChange(Number(v))}
+            >
+              {[5, 8, 11, 15].map((seconds) => (
+                <option key={seconds} value={String(seconds)}>
+                  {seconds} 秒
+                </option>
+              ))}
+            </PillSelect>
+          </>
         ) : null}
 
         {type.startsWith('video_') && !isSeedance ? (

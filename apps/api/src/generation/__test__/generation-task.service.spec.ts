@@ -129,6 +129,7 @@ describe('GenerationTaskService', () => {
         model: 'doubao-seedance-2-0-260128',
         duration: 11,
         ratio: '16:9',
+        resolution: '720p',
         content: expect.arrayContaining([
           { type: 'text', text: '果茶广告' },
           expect.objectContaining({ role: 'reference_image' }),
@@ -195,5 +196,39 @@ describe('GenerationTaskService', () => {
       'jimeng_ti2v_v30_pro',
       expect.any(Object),
     );
+  });
+
+  it('passes seedance resolution to ark', async () => {
+    prisma.generationTask.create.mockResolvedValue({
+      id: 't4',
+      reqKey: 'doubao-seedance-2-0-260128',
+    });
+    ark.createTask.mockResolvedValue({ id: 'cgt-4' });
+    prisma.generationTask.update.mockResolvedValue({
+      id: 't4',
+      status: GenerationStatus.processing,
+    });
+
+    await service.create('u1', {
+      type: 'video_seedance_r2v',
+      model: '2.0',
+      prompt: '4k test',
+      resolution: '4k',
+    });
+
+    expect(ark.createTask).toHaveBeenCalledWith(
+      expect.objectContaining({ resolution: '4k' }),
+    );
+  });
+
+  it('rejects invalid seedance resolution for model', async () => {
+    await expect(
+      service.create('u1', {
+        type: 'video_seedance_r2v',
+        model: '2.0-fast',
+        prompt: 'test',
+        resolution: '1080p',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

@@ -48,6 +48,10 @@ export class CreateGenerationTaskDto {
   duration?: number;
 
   @IsOptional()
+  @IsString()
+  resolution?: string;
+
+  @IsOptional()
   generate_audio?: boolean;
 
   @IsOptional()

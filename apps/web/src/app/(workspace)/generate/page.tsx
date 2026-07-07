@@ -63,6 +63,7 @@ export default function GeneratePage() {
   const [aspectRatio, setAspectRatio] = useState('16:9');
   const [frames, setFrames] = useState(121);
   const [duration, setDuration] = useState(5);
+  const [resolution, setResolution] = useState('720p');
   const [templateId, setTemplateId] = useState('hitchcock_dolly_in');
   const [cameraStrength, setCameraStrength] = useState('medium');
   const [tasks, setTasks] = useState<GenerationTask[]>([]);
@@ -405,6 +406,7 @@ export default function GeneratePage() {
       if (type !== 'image') {
         if (type === 'video_seedance_r2v') {
           body.duration = duration;
+          body.resolution = resolution;
           body.generate_audio = true;
           body.watermark = false;
         } else {
@@ -490,6 +492,8 @@ export default function GeneratePage() {
             onUploadAudioFile={onUploadAudioFile}
             duration={duration}
             onDurationChange={setDuration}
+            resolution={resolution}
+            onResolutionChange={setResolution}
             loading={loading}
             message={message}
             onUploadFile={onUploadFile}

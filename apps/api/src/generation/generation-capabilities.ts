@@ -48,6 +48,25 @@ export const MODEL_OPTIONS: Record<GenerationType, ModelOption[]> = {
   ],
 };
 
+export const DEFAULT_SEEDANCE_RESOLUTION = '720p';
+
+const SEEDANCE_RESOLUTIONS: Record<string, readonly string[]> = {
+  '2.0': ['480p', '720p', '1080p', '4k'],
+  '2.0-fast': ['480p', '720p'],
+  '2.0-mini': ['480p', '720p'],
+};
+
+export function listSeedanceResolutions(model = '2.0'): string[] {
+  return [...(SEEDANCE_RESOLUTIONS[model] ?? SEEDANCE_RESOLUTIONS['2.0'])];
+}
+
+export function isValidSeedanceResolution(
+  model: string | undefined,
+  resolution: string,
+): boolean {
+  return listSeedanceResolutions(model).includes(resolution);
+}
+
 const ARK_REQ_KEY_PREFIX = 'doubao-seedance-';
 
 export function isArkVideoReqKey(reqKey: string): boolean {

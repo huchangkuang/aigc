@@ -22,6 +22,7 @@ export type ArkCreateTaskBody = {
   generate_audio?: boolean;
   ratio?: string;
   duration?: number;
+  resolution?: string;
   watermark?: boolean;
 };
 

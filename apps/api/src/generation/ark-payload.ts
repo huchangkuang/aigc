@@ -1,4 +1,5 @@
 import type { ArkContentItem, ArkCreateTaskBody } from '../ark/ark.types';
+import { DEFAULT_SEEDANCE_RESOLUTION } from './generation-capabilities';
 
 export type ArkInputParams = {
   prompt: string;
@@ -7,6 +8,7 @@ export type ArkInputParams = {
   audio_urls?: string[];
   aspect_ratio?: string;
   duration?: number;
+  resolution?: string;
   generate_audio?: boolean;
   watermark?: boolean;
 };
@@ -51,6 +53,7 @@ export function buildArkCreateBody(
     generate_audio: params.generate_audio ?? true,
     ratio: params.aspect_ratio ?? '16:9',
     duration: params.duration ?? 5,
+    resolution: params.resolution ?? DEFAULT_SEEDANCE_RESOLUTION,
     watermark: params.watermark ?? false,
   };
 }

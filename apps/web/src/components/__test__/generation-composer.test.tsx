@@ -34,6 +34,8 @@ const baseProps = {
   onUploadAudioFile: vi.fn(),
   duration: 5,
   onDurationChange: vi.fn(),
+  resolution: '720p',
+  onResolutionChange: vi.fn(),
   loading: false,
   message: '',
   onUploadFile: vi.fn(),
@@ -58,6 +60,48 @@ describe('GenerationComposer model tier', () => {
 
     expect(screen.getByRole('option', { name: 'Seedance 2.0 Fast' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Seedance 2.0 Mini' })).toBeInTheDocument();
+  });
+
+  it('shows seedance resolution options for 2.0 model', async () => {
+    vi.mocked(api.listModels).mockResolvedValue([
+      { id: '2.0', label: 'Seedance 2.0' },
+    ]);
+
+    render(
+      <GenerationComposer
+        {...baseProps}
+        type="video_seedance_r2v"
+        model="2.0"
+        resolution="720p"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: '1080P' })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: '4K' })).toBeInTheDocument();
+    });
+  });
+
+  it('limits resolution options for seedance fast model', async () => {
+    const onResolutionChange = vi.fn();
+    vi.mocked(api.listModels).mockResolvedValue([
+      { id: '2.0-fast', label: 'Seedance 2.0 Fast' },
+    ]);
+
+    render(
+      <GenerationComposer
+        {...baseProps}
+        type="video_seedance_r2v"
+        model="2.0-fast"
+        resolution="1080p"
+        onResolutionChange={onResolutionChange}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(onResolutionChange).toHaveBeenCalledWith('720p');
+    });
+    expect(screen.queryByRole('option', { name: '1080P' })).not.toBeInTheDocument();
   });
 
   it('loads model options for current type', async () => {

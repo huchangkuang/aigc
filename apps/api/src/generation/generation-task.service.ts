@@ -11,6 +11,7 @@ import { buildArkCreateBody } from './ark-payload';
 import { CreateGenerationTaskDto } from './dto/create-generation-task.dto';
 import {
   isArkVideoReqKey,
+  isValidSeedanceResolution,
   resolveModelId,
   resolveReqKey,
 } from './generation-capabilities';
@@ -186,6 +187,10 @@ export class GenerationTaskService {
         typeof inputParams.duration === 'number'
           ? inputParams.duration
           : undefined,
+      resolution:
+        typeof inputParams.resolution === 'string'
+          ? inputParams.resolution
+          : undefined,
       generate_audio:
         typeof inputParams.generate_audio === 'boolean'
           ? inputParams.generate_audio
@@ -243,6 +248,12 @@ export class GenerationTaskService {
       if (dto.duration !== undefined && (dto.duration < 4 || dto.duration > 15)) {
         throw new BadRequestException('duration must be between 4 and 15 seconds');
       }
+      if (
+        dto.resolution !== undefined &&
+        !isValidSeedanceResolution(dto.model, dto.resolution)
+      ) {
+        throw new BadRequestException('Invalid resolution for Seedance model');
+      }
     }
   }
 
@@ -260,6 +271,7 @@ export class GenerationTaskService {
     if (dto.audio_urls) params.audio_urls = dto.audio_urls;
     if (dto.frames !== undefined) params.frames = dto.frames;
     if (dto.duration !== undefined) params.duration = dto.duration;
+    if (dto.resolution) params.resolution = dto.resolution;
     if (dto.aspect_ratio) params.aspect_ratio = dto.aspect_ratio;
     if (dto.seed !== undefined) params.seed = dto.seed;
     if (dto.template_id) params.template_id = dto.template_id;
