@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from '@/components/icon';
 import { MediaPreview } from '@/components/media-preview';
 import { api, type GenerationModelOption } from '@/lib/api-client';
+import { listSeedanceDurationOptions } from '@/lib/seedance-duration';
 import {
   DEFAULT_SEEDANCE_RESOLUTION,
   listSeedanceResolutionOptions,
@@ -450,7 +451,7 @@ export function GenerationComposer({
               value={String(duration)}
               onChange={(v) => onDurationChange(Number(v))}
             >
-              {[5, 8, 11, 15].map((seconds) => (
+              {listSeedanceDurationOptions().map((seconds) => (
                 <option key={seconds} value={String(seconds)}>
                   {seconds} 秒
                 </option>
