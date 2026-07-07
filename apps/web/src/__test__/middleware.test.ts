@@ -15,4 +15,11 @@ describe('middleware', () => {
     const response = middleware(request);
     expect(response?.headers.get('location')).toBe('http://localhost/generate');
   });
+
+  it('sets no-store cache control on protected routes', () => {
+    const request = new NextRequest('http://localhost/short-video/p1/script');
+    request.cookies.set('auth-token', 'jwt');
+    const response = middleware(request);
+    expect(response?.headers.get('cache-control')).toBe('private, no-store');
+  });
 });

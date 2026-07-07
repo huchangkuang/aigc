@@ -78,6 +78,7 @@ export default function ShortVideoListPage() {
               <Link
                 key={project.id}
                 href={`/short-video/${project.id}/script`}
+                prefetch={false}
                 className="glass-panel rounded-xl p-md transition hover:border-primary/30"
               >
                 <h3 className="font-bold text-on-surface">{project.title}</h3>

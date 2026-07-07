@@ -92,18 +92,26 @@ export type ComposeContext = {
   model?: string;
 };
 
-function getToken() {
+function authCookieFlags() {
+  const secure =
+    typeof window !== 'undefined' && window.location.protocol === 'https:';
+  return `path=/; max-age=${7 * 24 * 3600}; SameSite=Lax${secure ? '; Secure' : ''}`;
+}
+
+export function getAuthToken() {
   if (typeof document === 'undefined') return null;
   const match = document.cookie.match(/(?:^|; )auth-token=([^;]+)/);
   return match ? decodeURIComponent(match[1]) : null;
 }
 
 export function setAuthToken(token: string) {
-  document.cookie = `auth-token=${encodeURIComponent(token)}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
+  document.cookie = `auth-token=${encodeURIComponent(token)}; ${authCookieFlags()}`;
 }
 
 export function clearAuthToken() {
-  document.cookie = 'auth-token=; path=/; max-age=0';
+  const secure =
+    typeof window !== 'undefined' && window.location.protocol === 'https:';
+  document.cookie = `auth-token=; path=/; max-age=0${secure ? '; Secure' : ''}`;
 }
 
 function fail(message: string, silent?: boolean): never {
@@ -116,7 +124,7 @@ async function apiFetch<T>(
   init: RequestInit = {},
   options: ApiOptions = {},
 ): Promise<T> {
-  const token = getToken();
+  const token = getAuthToken();
   const headers = new Headers(init.headers);
   if (!headers.has('Content-Type') && init.body && !(init.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
