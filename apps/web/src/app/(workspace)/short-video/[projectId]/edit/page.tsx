@@ -72,13 +72,21 @@ export default function EditPage() {
 
   async function generate(
     segmentId: string,
-    payload: { model: string; prompt: string; assetIds: string[] },
+    payload: {
+      model: string;
+      resolution: string;
+      duration: number;
+      prompt: string;
+      assetIds: string[];
+    },
   ) {
     setBusyId(segmentId);
     try {
       await api.generateSegmentVideo(projectId, segmentId, {
         prompt: payload.prompt,
         model: payload.model,
+        resolution: payload.resolution,
+        duration: payload.duration,
         assetIds: payload.assetIds,
       });
       await reload();

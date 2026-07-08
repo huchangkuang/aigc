@@ -123,6 +123,8 @@ describe('EditPage', () => {
       expect(generateSegmentVideo).toHaveBeenCalledWith('p1', 'seg1', {
         prompt: 'saved prompt',
         model: '2.0',
+        resolution: '720p',
+        duration: 8,
         assetIds: ['asset-1'],
       });
     });

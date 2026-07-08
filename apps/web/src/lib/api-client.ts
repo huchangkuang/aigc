@@ -326,7 +326,13 @@ export const api = {
   generateSegmentVideo(
     projectId: string,
     segmentId: string,
-    body: { prompt: string; model?: string; assetIds?: string[] },
+    body: {
+      prompt: string;
+      model?: string;
+      resolution?: string;
+      duration?: number;
+      assetIds?: string[];
+    },
   ) {
     return apiFetch<GenerationTask>(
       `/short-video/projects/${projectId}/segments/${segmentId}/generate-video`,

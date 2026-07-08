@@ -90,6 +90,8 @@ describe('segment generate', () => {
       prompt: 'user prompt',
       assetIds: ['asset-1'],
       model: '2.0-fast',
+      resolution: '1080p',
+      duration: 10,
     });
 
     expect(generation.create).toHaveBeenCalledWith(
@@ -98,6 +100,8 @@ describe('segment generate', () => {
         type: 'video_seedance_r2v',
         prompt: 'user prompt',
         model: '2.0-fast',
+        resolution: '1080p',
+        duration: 10,
         image_urls: ['https://signed/img.png'],
       }),
     );

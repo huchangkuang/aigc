@@ -29,6 +29,7 @@ export type Segment = {
   referenceAssetIds?: string[];
   seedancePromptDoc?: Record<string, unknown>;
   model?: '2.0' | '2.0-fast' | '2.0-mini';
+  resolution?: string;
   videoTaskId?: string;
   videoAssetId?: string;
 };

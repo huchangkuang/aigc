@@ -411,7 +411,13 @@ export class ShortVideoProjectService {
     userId: string,
     projectId: string,
     segmentId: string,
-    dto: { prompt: string; model?: string; assetIds?: string[] },
+    dto: {
+      prompt: string;
+      model?: string;
+      resolution?: string;
+      duration?: number;
+      assetIds?: string[];
+    },
   ) {
     const project = await this.getForUser(userId, projectId);
     const segments = project.segments as SegmentsData | null;
@@ -435,11 +441,14 @@ export class ShortVideoProjectService {
     }
 
     const model = (dto.model ?? segment.model ?? '2.0') as SegmentsData['segments'][0]['model'];
+    const resolution = dto.resolution ?? segment.resolution ?? '720p';
+    const duration = dto.duration ?? segment.durationSec;
     const taskDto: CreateGenerationTaskDto = {
       type: 'video_seedance_r2v',
       prompt: dto.prompt,
       model,
-      duration: segment.durationSec,
+      duration,
+      resolution,
       aspect_ratio: '16:9',
       generate_audio: true,
       watermark: false,
@@ -454,6 +463,8 @@ export class ShortVideoProjectService {
       referenceAssetIds: assetIds,
       videoTaskId: task.id,
       model,
+      resolution,
+      durationSec: duration,
     });
 
     await this.prisma.shortVideoProject.update({

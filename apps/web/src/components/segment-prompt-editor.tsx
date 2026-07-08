@@ -54,7 +54,7 @@ export function SegmentPromptEditor({
     editorProps: {
       attributes: {
         class:
-          'min-h-[88px] w-full rounded-lg border border-outline-variant/40 bg-surface-container-low/60 p-sm text-sm leading-relaxed text-on-surface outline-none focus:border-primary',
+          'min-h-[168px] flex-1 w-full rounded-lg border border-outline-variant/40 bg-surface-container-low/60 p-sm text-sm leading-relaxed text-on-surface outline-none focus:border-primary',
         'data-testid': `segment-prompt-editor-${segment.id}`,
       },
     },
@@ -79,14 +79,16 @@ export function SegmentPromptEditor({
   }
 
   return (
-    <div>
+    <div className="flex min-h-0 flex-1 flex-col">
       <label
         htmlFor={`segment-prompt-${segment.id}`}
-        className="text-label-sm mb-1 block font-medium text-on-surface-variant"
+        className="text-label-sm mb-1 block shrink-0 font-medium text-on-surface-variant"
       >
         Seedance 提示词
       </label>
-      <EditorContent id={`segment-prompt-${segment.id}`} editor={editor} />
+      <div className="min-h-0 flex-1">
+        <EditorContent id={`segment-prompt-${segment.id}`} editor={editor} />
+      </div>
     </div>
   );
 }

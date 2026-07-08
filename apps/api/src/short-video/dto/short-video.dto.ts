@@ -1,4 +1,11 @@
-import { IsArray, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateShortVideoProjectDto {
   @IsString()
@@ -31,6 +38,14 @@ export class GenerateSegmentVideoDto {
   @IsOptional()
   @IsString()
   model?: string;
+
+  @IsOptional()
+  @IsString()
+  resolution?: string;
+
+  @IsOptional()
+  @IsInt()
+  duration?: number;
 
   @IsOptional()
   @IsArray()

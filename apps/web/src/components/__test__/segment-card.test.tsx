@@ -71,6 +71,8 @@ describe('SegmentCard', () => {
 
     expect(onGenerate).toHaveBeenCalledWith({
       model: '2.0',
+      resolution: '720p',
+      duration: 8,
       prompt: 'edited prompt',
       assetIds: ['asset-1'],
     });
